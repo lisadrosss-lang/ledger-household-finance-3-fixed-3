@@ -6,9 +6,8 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    // Use the site root for normal deployments. If you deploy under a repo subpath
-    // instead, change this to the repo name such as '/ledger-household-finance-3-fixed-3/'
-    base: '/',
+    // GitHub Pages uses the repo name as the path unless a custom domain is configured.
+    base: '/ledger-household-finance-3-fixed-3/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
