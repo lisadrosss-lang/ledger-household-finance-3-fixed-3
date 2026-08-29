@@ -10,9 +10,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "predeploy":"npm run build",
-     "deploy":"gh-pages -d dist",
-     "homepage":"https://lisadrosss-lang.github.io/light-/"
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
+    "homepage": "https://lisadrosss-lang.github.io/ledger-household-finance-3-fixed-3-/"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
