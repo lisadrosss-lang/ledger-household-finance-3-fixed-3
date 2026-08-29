@@ -51,6 +51,11 @@ export default function App() {
 
   // Supabase connection state indicator
   const [supabaseConnected, setSupabaseConnected] = useState(false);
+    // Auto-sync bookkeeping: skip pushing on the very first render (nothing's
+  // changed yet), and again right after a pull (we just received that data,
+  // no need to immediately push it back).
+  const skipNextAutoPush = React.useRef(true);
+  const autoPushTimeout = React.useRef<number | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -77,6 +82,49 @@ export default function App() {
     };
   }, []);
 
+    // Auto-sync: pull the latest cloud data once on load, if auto-sync is on.
+  useEffect(() => {
+    if (!getAutoSyncPreference()) return;
+    let isMounted = true;
+    supabasePullAll()
+      .then((remote) => {
+        if (isMounted && remote) {
+          skipNextAutoPush.current = true;
+          setState((prev) => ({ ...prev, ...remote }));
+          showToast("Synced latest data from cloud");
+        }
+      })
+      .catch((e: any) => {
+        console.error("Auto-pull on load failed:", e);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Auto-sync: push to the cloud shortly after any change, if auto-sync is on.
+  useEffect(() => {
+    const shouldSkipThisRun = skipNextAutoPush.current;
+    skipNextAutoPush.current = false;
+
+    if (!getAutoSyncPreference() || shouldSkipThisRun) return;
+
+    if (autoPushTimeout.current) {
+      window.clearTimeout(autoPushTimeout.current);
+    }
+    autoPushTimeout.current = window.setTimeout(() => {
+      supabasePushAll(state).catch((e: any) => {
+        console.error("Auto-push failed:", e);
+        showToast(`Cloud auto-sync error: ${e.message || "failed to push"}`);
+      });
+    }, 1500);
+
+    return () => {
+      if (autoPushTimeout.current) {
+        window.clearTimeout(autoPushTimeout.current);
+      }
+    };
+  }, [state]);
   const currentView = navHistory[navHistory.length - 1] || "home";
   const [baseView, viewParam] = currentView.split(":");
 
