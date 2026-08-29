@@ -66,10 +66,12 @@ export default function App() {
     }, 2200);
   }, []);
 
-  // Save to localStorage whenever state changes
+  // Save to localStorage whenever state changes, but not while cloud sync is active.
+  // When Supabase is connected and auto-sync is enabled, the remote state is the source of truth.
   useEffect(() => {
+    if (getAutoSyncPreference() && supabaseConnected) return;
     saveStateToStorage(state);
-  }, [state]);
+  }, [state, supabaseConnected]);
 
   // Check Supabase connection on startup
   useEffect(() => {
@@ -90,14 +92,15 @@ export default function App() {
     let isMounted = true;
     supabasePullAll()
       .then((remote) => {
-        if (isMounted && remote && Object.keys(remote).length > 0) {
-          skipNextAutoPush.current = true;
-          setState((prev) => {
-            const merged = { ...prev, ...remote };
-            const isSame = JSON.stringify(prev) === JSON.stringify(merged);
-            return isSame ? prev : merged;
-          });
-        }
+        if (!isMounted || !remote || Object.keys(remote).length === 0) return;
+        skipNextAutoPush.current = true;
+        setState((prev) => {
+          const next = {
+            ...prev,
+            ...remote,
+          };
+          return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+        });
       })
       .catch((e: any) => {
         console.error("Auto-pull on load failed:", e);
@@ -119,9 +122,11 @@ export default function App() {
         if (cancelled || !remote || Object.keys(remote).length === 0) return;
 
         setState((prev) => {
-          const merged = { ...prev, ...remote };
-          const isSame = JSON.stringify(prev) === JSON.stringify(merged);
-          return isSame ? prev : merged;
+          const next = {
+            ...prev,
+            ...remote,
+          };
+          return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
         });
       } catch (e) {
         console.warn("Background cloud sync poll failed:", e);
