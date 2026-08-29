@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #F6EEF6;
+  --ink: #2B2740;
+  --dim: rgba(43, 39, 64, 0.55);
+  --card: #FFFFFF;
+  --violet: #A64BC9;
+  --violet-dark: #7C3AED;
+  --peach: #F2994A;
+  --mint: #5FD3A3;
+  --rose: #EB5757;
+  --red: #E5484D;
+  --maroon: #7A1F2B;
+  --accent-grad: linear-gradient(135deg, #6D3AED 0%, #B0459E 55%, #F2994A 100%);
+  --line: rgba(43, 39, 64, 0.08);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  background-image: radial-gradient(circle at 15% 0%, rgba(124, 58, 237, 0.10), transparent 45%), radial-gradient(circle at 100% 15%, rgba(242, 153, 74, 0.10), transparent 45%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.font-serif {
+  font-family: 'Fraunces', serif;
+}
+
+/* Animations */
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes contentIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.content-enter {
+  animation: contentIn 0.18s ease forwards;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(43, 39, 64, 0.15);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(43, 39, 64, 0.25);
+}
+
+/* Custom Select caret */
+.period-select {
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%237C3AED'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.period-select.active {
+  background-color: var(--violet);
+  color: #fff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='white'/></svg>");
+}

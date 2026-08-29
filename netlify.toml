@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# Route API calls to the serverless function. The extra "/api" segment in the
+# target (and the matching basePath in netlify/functions/api.ts) is what lets
+# the Express routes keep their original "/api/..." paths unchanged.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+
+# SPA fallback for the React frontend — must come after the /api/* rule above.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,6 @@
+{
+  "name": "Ledger Household Finance",
+  "description": "Household finance tracker with AI bill extraction from photos, bill payment reminders, monthly feedback advice, interactive grocery spending diagrams, and Supabase cloud synchronization.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
