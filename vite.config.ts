@@ -7,7 +7,7 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     // GitHub Pages uses the repo name as the path unless a custom domain is configured.
-    base:"/ledger-household-finance-3-fixed-3",
+    base:"/",
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
