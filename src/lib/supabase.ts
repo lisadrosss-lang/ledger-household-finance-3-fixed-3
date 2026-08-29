@@ -5,9 +5,13 @@ const LS_SUPABASE_AUTOSYNC = "ledger_supabase_autosync";
 export function getAutoSyncPreference(): boolean {
   try {
     const val = localStorage.getItem(LS_SUPABASE_AUTOSYNC);
-    return val === "true";
+    if (val === null) {
+      localStorage.setItem(LS_SUPABASE_AUTOSYNC, "true");
+      return true;
+    }
+    return val === "true" || val === "1";
   } catch {
-    return false;
+    return true;
   }
 }
 

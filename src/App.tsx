@@ -94,7 +94,8 @@ export default function App() {
           skipNextAutoPush.current = true;
           setState((prev) => {
             const merged = { ...prev, ...remote };
-            return JSON.stringify(prev) === JSON.stringify(merged) ? prev : merged;
+            const isSame = JSON.stringify(prev) === JSON.stringify(merged);
+            return isSame ? prev : merged;
           });
         }
       })
@@ -119,7 +120,8 @@ export default function App() {
 
         setState((prev) => {
           const merged = { ...prev, ...remote };
-          return JSON.stringify(prev) === JSON.stringify(merged) ? prev : merged;
+          const isSame = JSON.stringify(prev) === JSON.stringify(merged);
+          return isSame ? prev : merged;
         });
       } catch (e) {
         console.warn("Background cloud sync poll failed:", e);
