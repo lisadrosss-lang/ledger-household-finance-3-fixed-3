@@ -1,5 +1,6 @@
-require("dotenv").config();
+require('dotenv').config();
 
-const apiKey = process.env.API_KEY;
+const api_Key = process.env.API_KEY;
+console.log (process.env);
 
 module.exports = apiKey;
