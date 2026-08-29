@@ -6,7 +6,9 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    base:'/ledger-household-finance-3-fixed-3/',
+    // Use the site root for normal deployments. If you deploy under a repo subpath
+    // instead, change this to the repo name such as '/ledger-household-finance-3-fixed-3/'
+    base: '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
