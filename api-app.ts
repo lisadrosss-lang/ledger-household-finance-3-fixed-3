@@ -20,6 +20,35 @@ function isValidHttpUrl(str: string): boolean {
   }
 }
 
+function normalizeLegacyLabel(value?: string | null): string | null {
+  if (value == null) return null;
+  const trim = value.trim();
+  if (!trim) return null;
+  if (trim === "Gemeente Amsterdam") return "Gemeente";
+  if (trim === "Gemeente Amsterdam — municipal tax") return "Gemeente";
+  return trim;
+}
+
+function normalizeOutgoingStateForSync(state: any) {
+  const normalized = { ...state };
+
+  if (Array.isArray(normalized.categories)) {
+    normalized.categories = normalized.categories.map((c: any) => ({
+      ...c,
+      name: normalizeLegacyLabel(c?.name) || c?.name || "Untitled",
+    }));
+  }
+
+  if (Array.isArray(normalized.bills)) {
+    normalized.bills = normalized.bills.map((b: any) => ({
+      ...b,
+      name: normalizeLegacyLabel(b?.name) || b?.name || "Untitled Bill",
+    }));
+  }
+
+  return normalized;
+}
+
 function getServerSupabase(): SupabaseClient | null {
   if (serverSupabaseClient) return serverSupabaseClient;
 
@@ -131,13 +160,14 @@ export async function createApiApp(): Promise<express.Express> {
         return res.status(400).json({ success: false, error: "No state data provided." });
       }
 
+      const normalizedState = normalizeOutgoingStateForSync(state);
       const results: string[] = [];
 
       // 1. Categories
-      if (Array.isArray(state.categories) && state.categories.length > 0) {
-        const catRows = state.categories.map((c: any) => ({
+      if (Array.isArray(normalizedState.categories) && normalizedState.categories.length > 0) {
+        const catRows = normalizedState.categories.map((c: any) => ({
           id: String(c.id),
-          name: c.name || "Untitled",
+          name: normalizeLegacyLabel(c.name) || c.name || "Untitled",
           color: c.color || "#7B6EF6",
           description: c.description || "",
           featured: !!c.featured,
@@ -154,10 +184,10 @@ export async function createApiApp(): Promise<express.Express> {
       }
 
       // 2. Bills
-      if (Array.isArray(state.bills) && state.bills.length > 0) {
-        const billRows = state.bills.map((b: any) => ({
+      if (Array.isArray(normalizedState.bills) && normalizedState.bills.length > 0) {
+        const billRows = normalizedState.bills.map((b: any) => ({
           id: Number(b.id),
-          name: b.name || "Untitled Bill",
+          name: normalizeLegacyLabel(b.name) || b.name || "Untitled Bill",
           category: b.category || "housing",
           amount: parseFloat(b.amount) || 0,
           paid_amount: parseFloat(b.paidAmount ?? 0),
@@ -186,8 +216,8 @@ export async function createApiApp(): Promise<express.Express> {
       }
 
       // 3. Accounts
-      if (Array.isArray(state.accounts) && state.accounts.length > 0) {
-        const accRows = state.accounts.map((a: any) => ({
+      if (Array.isArray(normalizedState.accounts) && normalizedState.accounts.length > 0) {
+        const accRows = normalizedState.accounts.map((a: any) => ({
           id: String(a.id),
           label: a.label || a.id,
           tag: a.tag || null,
@@ -209,13 +239,13 @@ export async function createApiApp(): Promise<express.Express> {
       }
 
       // 4. Groceries
-      if (state.groceries) {
+      if (normalizedState.groceries) {
         try {
           const { error: grocErr } = await supabase.from("groceries").upsert(
             {
               id: "main",
-              budget: state.groceries.budget || 400,
-              entries: state.groceries.entries || [],
+              budget: normalizedState.groceries.budget || 400,
+              entries: normalizedState.groceries.entries || [],
               updated_at: new Date().toISOString(),
             },
             { onConflict: "id" }
@@ -231,11 +261,11 @@ export async function createApiApp(): Promise<express.Express> {
         await supabase.from("app_settings").upsert(
           {
             id: "global",
-            verse: state.verse || null,
-            subscriptions: state.subscriptions || [],
-            currency: state.currency || { code: "EUR", symbol: "€" },
-            language: state.language || "en",
-            monthly_budget_cap: state.monthlyBudgetCap || 2500,
+            verse: normalizedState.verse || null,
+            subscriptions: normalizedState.subscriptions || [],
+            currency: normalizedState.currency || { code: "EUR", symbol: "€" },
+            language: normalizedState.language || "en",
+            monthly_budget_cap: normalizedState.monthlyBudgetCap || 2500,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "id" }
@@ -281,7 +311,7 @@ export async function createApiApp(): Promise<express.Express> {
         if (!catErr && catData && catData.length > 0) {
           updates.categories = catData.map((row: any) => ({
             id: String(row.id),
-            name: row.name || "Untitled",
+            name: normalizeLegacyLabel(row.name) || row.name || "Untitled",
             color: row.color || "#7B6EF6",
             description: row.description || "",
             featured: !!row.featured,
@@ -319,7 +349,7 @@ export async function createApiApp(): Promise<express.Express> {
             }
             return {
               id: Number(row.id),
-              name: row.name || "Untitled Bill",
+              name: normalizeLegacyLabel(row.name) || row.name || "Untitled Bill",
               category: row.category || "housing",
               amount: parseFloat(row.amount) || 0,
               paidAmount: parseFloat(row.paid_amount ?? row.paidAmount ?? 0),
