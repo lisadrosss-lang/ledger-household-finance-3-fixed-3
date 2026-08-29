@@ -8,6 +8,8 @@ import {
 } from "./lib/storage";
 import {
   testSupabaseConnection,
+  supabasePullAll,
+  getAutoSyncPreference,
 } from "./lib/supabase";
 import { Header, Sidebar, Tabbar } from "./components/Navigation";
 import { Toast, ConfirmModal } from "./components/Modal";
@@ -88,10 +90,12 @@ export default function App() {
     let isMounted = true;
     supabasePullAll()
       .then((remote) => {
-        if (isMounted && remote) {
+        if (isMounted && remote && Object.keys(remote).length > 0) {
           skipNextAutoPush.current = true;
-          setState((prev) => ({ ...prev, ...remote }));
-          showToast("Synced latest data from cloud");
+          setState((prev) => {
+            const merged = { ...prev, ...remote };
+            return JSON.stringify(prev) === JSON.stringify(merged) ? prev : merged;
+          });
         }
       })
       .catch((e: any) => {
@@ -101,6 +105,35 @@ export default function App() {
       isMounted = false;
     };
   }, []);
+
+  // Auto-sync: keep polling the cloud so other devices can update this browser in real time.
+  useEffect(() => {
+    if (!getAutoSyncPreference()) return;
+
+    let cancelled = false;
+
+    const pollRemoteChanges = async () => {
+      try {
+        const remote = await supabasePullAll();
+        if (cancelled || !remote || Object.keys(remote).length === 0) return;
+
+        setState((prev) => {
+          const merged = { ...prev, ...remote };
+          return JSON.stringify(prev) === JSON.stringify(merged) ? prev : merged;
+        });
+      } catch (e) {
+        console.warn("Background cloud sync poll failed:", e);
+      }
+    };
+
+    pollRemoteChanges();
+    const intervalId = window.setInterval(pollRemoteChanges, 12000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [showToast]);
 
   // Auto-sync: push to the cloud shortly after any change, if auto-sync is on.
   useEffect(() => {
