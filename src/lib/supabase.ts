@@ -21,6 +21,25 @@ export function setAutoSyncPreference(enabled: boolean): void {
   } catch {}
 }
 
+export function subscribeToSyncEvents(onSync: () => void): () => void {
+  if (typeof EventSource === "undefined") {
+    return () => {};
+  }
+
+  const source = new EventSource("/api/sync/events");
+  source.addEventListener("sync", () => {
+    onSync();
+  });
+
+  source.onerror = () => {
+    // Keep the connection alive; the polling fallback still handles updates.
+  };
+
+  return () => {
+    source.close();
+  };
+}
+
 /**
  * Checks connection status against the secure backend proxy.
  * No API keys or tokens are exposed to or handled by the frontend.

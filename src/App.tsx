@@ -10,6 +10,7 @@ import {
   testSupabaseConnection,
   supabasePullAll,
   getAutoSyncPreference,
+  subscribeToSyncEvents,
 } from "./lib/supabase";
 import { Header, Sidebar, Tabbar } from "./components/Navigation";
 import { Toast, ConfirmModal } from "./components/Modal";
@@ -110,13 +111,14 @@ export default function App() {
     };
   }, []);
 
-  // Auto-sync: keep polling the cloud so other devices can update this browser in real time.
+  // Auto-sync: listen for server push events and keep polling as a fallback so
+  // other devices update this browser immediately and also recover if the stream briefly drops.
   useEffect(() => {
     if (!getAutoSyncPreference()) return;
 
     let cancelled = false;
 
-    const pollRemoteChanges = async () => {
+    const applyRemoteState = async () => {
       try {
         const remote = await supabasePullAll();
         if (cancelled || !remote || Object.keys(remote).length === 0) return;
@@ -129,15 +131,20 @@ export default function App() {
           return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
         });
       } catch (e) {
-        console.warn("Background cloud sync poll failed:", e);
+        console.warn("Background cloud sync update failed:", e);
       }
     };
 
-    pollRemoteChanges();
-    const intervalId = window.setInterval(pollRemoteChanges, 12000);
+    const stopListening = subscribeToSyncEvents(() => {
+      applyRemoteState();
+    });
+
+    applyRemoteState();
+    const intervalId = window.setInterval(applyRemoteState, 12000);
 
     return () => {
       cancelled = true;
+      stopListening();
       window.clearInterval(intervalId);
     };
   }, [showToast]);

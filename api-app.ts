@@ -7,6 +7,19 @@ dotenv.config();
 
 // Lazy-initialized Server-Side Supabase Client (Secret keys never sent to browser)
 let serverSupabaseClient: SupabaseClient | null = null;
+const syncSubscribers = new Set<express.Response>();
+
+function broadcastSyncEvent() {
+  const payload = `event: sync\ndata: ${JSON.stringify({ type: "sync", at: new Date().toISOString() })}\n\n`;
+
+  for (const res of syncSubscribers) {
+    try {
+      res.write(payload);
+    } catch {
+      syncSubscribers.delete(res);
+    }
+  }
+}
 
 function isValidHttpUrl(str: string): boolean {
   if (!str || typeof str !== "string") return false;
@@ -88,6 +101,21 @@ export async function createApiApp(): Promise<express.Express> {
   // Health endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Server-Sent Events stream for immediate cross-device update notifications.
+  app.get("/api/sync/events", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    res.write(`event: connected\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+    syncSubscribers.add(res);
+
+    req.on("close", () => {
+      syncSubscribers.delete(res);
+    });
   });
 
   // Supabase Server-Side Sync Status (Returns status WITHOUT leaking API keys or secrets)
@@ -274,6 +302,8 @@ export async function createApiApp(): Promise<express.Express> {
       } catch (setEx: any) {
         console.warn("Settings sync warning:", setEx?.message);
       }
+
+      broadcastSyncEvent();
 
       return res.json({
         success: true,
