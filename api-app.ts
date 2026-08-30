@@ -215,28 +215,47 @@ export async function createApiApp(): Promise<express.Express> {
 
       // 2. Bills
       if (Array.isArray(normalizedState.bills) && normalizedState.bills.length > 0) {
-        const billRows = normalizedState.bills.map((b: any) => ({
-          id: Number(b.id),
-          name: normalizeLegacyLabel(b.name) || b.name || "Untitled Bill",
-          category: b.category || "housing",
-          amount: parseFloat(b.amount) || 0,
-          paid_amount: parseFloat(b.paidAmount ?? 0),
-          due: b.due || "—",
-          month: b.month || "Aug",
-          year: parseInt(b.year, 10) || 2026,
-          timing: b.timing || "upcoming",
-          photo: b.photo ? (typeof b.photo === "string" ? b.photo : JSON.stringify(b.photo)) : null,
-          logo: b.logo || null,
-          payment_plan: !!b.paymentPlan,
-          notes: b.notes || "",
-          paid_by: b.paidBy || null,
-          escalation: b.escalation || null,
-          iban: b.iban || null,
-          reference: b.reference || null,
-          payments: b.payments || [],
-          sort_order: b.sortOrder ?? 0,
-          updated_at: new Date().toISOString(),
-        }));
+        const billRows = normalizedState.bills.map((b: any) => {
+          let photoToStore = null;
+          if (b.photo) {
+            try {
+              const photoStr = typeof b.photo === "string" ? b.photo : JSON.stringify(b.photo);
+              // Warn if photo is very large (>5MB)
+              if (photoStr.length > 5242880) {
+                console.warn(`⚠️  Bill ${b.id} photo is ${(photoStr.length / 1024 / 1024).toFixed(1)}MB - may cause sync issues`);
+              } else {
+                console.log(`📄 Bill ${b.id} photo: ${(photoStr.length / 1024).toFixed(1)}KB`);
+              }
+              photoToStore = photoStr;
+            } catch (e) {
+              console.warn(`Failed to serialize photo for bill ${b.id}:`, e);
+              photoToStore = null;
+            }
+          }
+          
+          return {
+            id: Number(b.id),
+            name: normalizeLegacyLabel(b.name) || b.name || "Untitled Bill",
+            category: b.category || "housing",
+            amount: parseFloat(b.amount) || 0,
+            paid_amount: parseFloat(b.paidAmount ?? 0),
+            due: b.due || "—",
+            month: b.month || "Aug",
+            year: parseInt(b.year, 10) || 2026,
+            timing: b.timing || "upcoming",
+            photo: photoToStore,
+            logo: b.logo || null,
+            payment_plan: !!b.paymentPlan,
+            notes: b.notes || "",
+            paid_by: b.paidBy || null,
+            escalation: b.escalation || null,
+            iban: b.iban || null,
+            reference: b.reference || null,
+            payments: b.payments || [],
+            sort_order: b.sortOrder ?? 0,
+            updated_at: new Date().toISOString(),
+          };
+        });
         const { error: billErr } = await supabase.from("bills").upsert(billRows, { onConflict: "id" });
         if (billErr) {
           console.warn("Bills sync warning:", billErr.message);
