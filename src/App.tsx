@@ -111,13 +111,36 @@ export default function App() {
     supabasePullAll()
       .then((remote) => {
         if (!isMounted || !remote || Object.keys(remote).length === 0) return;
-        skipNextAutoPush.current = true;
-        lastRemotePullTime.current = Date.now();
+        
         setState((prev) => {
-          const next = {
-            ...prev,
-            ...remote,
-          };
+          // Smart merge: if remote data is dramatically smaller than local,
+          // it might be incomplete (e.g., only 1 bill in DB vs 13 in local).
+          // In this case, preserve local data and only update if remote is more complete.
+          let next = { ...prev };
+          
+          if (remote.bills && Array.isArray(remote.bills)) {
+            // Only replace bills if remote has a reasonable amount (>= 50% of local)
+            if (remote.bills.length >= (prev.bills?.length ?? 0) * 0.5 || remote.bills.length >= 5) {
+              next.bills = remote.bills;
+            } else if (remote.bills.length > 0) {
+              // Merge: add remote bills that don't exist locally, keep local bills
+              const remoteIds = new Set(remote.bills.map((b: any) => b.id));
+              next.bills = [
+                ...prev.bills?.filter((b) => !remoteIds.has(b.id)) ?? [],
+                ...remote.bills,
+              ];
+            }
+          }
+          
+          if (remote.categories) next.categories = remote.categories;
+          if (remote.accounts) next.accounts = remote.accounts;
+          if (remote.groceries) next.groceries = remote.groceries;
+          if (remote.verse) next.verse = remote.verse;
+          if (remote.subscriptions) next.subscriptions = remote.subscriptions;
+          if (remote.currency) next.currency = remote.currency;
+          if (remote.language) next.language = remote.language;
+          if (remote.monthlyBudgetCap) next.monthlyBudgetCap = remote.monthlyBudgetCap;
+          
           return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
         });
       })
@@ -139,7 +162,6 @@ export default function App() {
     const applyRemoteState = async () => {
       try {
         // Skip pulling if we just pushed within the last 2.5 seconds.
-        // This gives the push time to complete before we pull new state.
         const now = Date.now();
         if (now - pushInFlightTime.current < 2500) {
           return;
@@ -150,10 +172,30 @@ export default function App() {
 
         lastRemotePullTime.current = now;
         setState((prev) => {
-          const next = {
-            ...prev,
-            ...remote,
-          };
+          // Smart merge: preserve local data if remote is incomplete
+          let next = { ...prev };
+          
+          if (remote.bills && Array.isArray(remote.bills)) {
+            if (remote.bills.length >= (prev.bills?.length ?? 0) * 0.5 || remote.bills.length >= 5) {
+              next.bills = remote.bills;
+            } else if (remote.bills.length > 0) {
+              const remoteIds = new Set(remote.bills.map((b: any) => b.id));
+              next.bills = [
+                ...prev.bills?.filter((b) => !remoteIds.has(b.id)) ?? [],
+                ...remote.bills,
+              ];
+            }
+          }
+          
+          if (remote.categories) next.categories = remote.categories;
+          if (remote.accounts) next.accounts = remote.accounts;
+          if (remote.groceries) next.groceries = remote.groceries;
+          if (remote.verse) next.verse = remote.verse;
+          if (remote.subscriptions) next.subscriptions = remote.subscriptions;
+          if (remote.currency) next.currency = remote.currency;
+          if (remote.language) next.language = remote.language;
+          if (remote.monthlyBudgetCap) next.monthlyBudgetCap = remote.monthlyBudgetCap;
+          
           return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
         });
       } catch (e) {
@@ -161,13 +203,12 @@ export default function App() {
       }
     };
 
-    // Subscribe to SSE events for immediate notifications
     const stopListening = subscribeToSyncEvents(() => {
       console.log("SSE sync event received");
       applyRemoteState();
     });
 
-    // Also poll every 30 seconds as a fallback if SSE fails
+    // Poll every 30 seconds as a fallback
     const pollIntervalId = window.setInterval(() => {
       console.log("Polling for remote updates (fallback)");
       applyRemoteState();
