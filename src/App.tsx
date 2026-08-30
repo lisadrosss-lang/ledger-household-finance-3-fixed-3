@@ -104,7 +104,7 @@ export default function App() {
     };
   }, []);
 
-    // Auto-sync: pull the latest cloud data once on load, if auto-sync is on.
+  // Auto-sync: pull the latest cloud data once on load, if auto-sync is on.
   useEffect(() => {
     if (!getAutoSyncPreference()) return;
     let isMounted = true;
@@ -112,6 +112,7 @@ export default function App() {
       .then((remote) => {
         if (!isMounted || !remote || Object.keys(remote).length === 0) return;
         skipNextAutoPush.current = true;
+        lastRemotePullTime.current = Date.now();
         setState((prev) => {
           const next = {
             ...prev,
@@ -128,8 +129,8 @@ export default function App() {
     };
   }, []);
 
-  // Auto-sync: listen for server push events only (no aggressive polling).
-  // If a push just happened, skip the pull to avoid reverting unsaved edits.
+  // Auto-sync: listen for server push events AND keep polling as a fallback.
+  // If SSE connection drops, polling ensures we still get updates from other devices.
   useEffect(() => {
     if (!getAutoSyncPreference()) return;
 
@@ -160,13 +161,22 @@ export default function App() {
       }
     };
 
+    // Subscribe to SSE events for immediate notifications
     const stopListening = subscribeToSyncEvents(() => {
+      console.log("SSE sync event received");
       applyRemoteState();
     });
+
+    // Also poll every 30 seconds as a fallback if SSE fails
+    const pollIntervalId = window.setInterval(() => {
+      console.log("Polling for remote updates (fallback)");
+      applyRemoteState();
+    }, 30000);
 
     return () => {
       cancelled = true;
       stopListening();
+      window.clearInterval(pollIntervalId);
     };
   }, []);
 

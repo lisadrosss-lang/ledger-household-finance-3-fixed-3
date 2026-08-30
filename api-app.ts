@@ -188,6 +188,8 @@ export async function createApiApp(): Promise<express.Express> {
         return res.status(400).json({ success: false, error: "No state data provided." });
       }
 
+      console.log("📤 Incoming push from client, syncing to database...");
+
       const normalizedState = normalizeOutgoingStateForSync(state);
       const results: string[] = [];
 
@@ -303,6 +305,7 @@ export async function createApiApp(): Promise<express.Express> {
         console.warn("Settings sync warning:", setEx?.message);
       }
 
+      console.log(`✅ Sync complete. Broadcasting to ${syncSubscribers.size} connected device(s): ${results.join(", ")}`);
       broadcastSyncEvent();
 
       return res.json({
@@ -329,6 +332,8 @@ export async function createApiApp(): Promise<express.Express> {
           error: "Supabase server connection is not initialized.",
         });
       }
+
+      console.log("📥 Pull request from client, fetching latest state from database...");
 
       const updates: any = {};
 
