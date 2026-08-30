@@ -3,6 +3,7 @@ import { AppState, Bill, Category, Account, GroceriesState } from "./types";
 import {
   loadInitialState,
   saveStateToStorage,
+  DEFAULT_STATE,
   CURRENT_MONTH,
   CURRENT_YEAR,
 } from "./lib/storage";
@@ -31,7 +32,12 @@ import { PasswordGateView } from "./components/views/PasswordGateView";
 import { Plus } from "lucide-react";
 
 export default function App() {
-  const [state, setState] = useState<AppState>(loadInitialState);
+  const [state, setState] = useState<AppState>(() => {
+    if (getAutoSyncPreference()) {
+      return DEFAULT_STATE;
+    }
+    return loadInitialState();
+  });
   const [navHistory, setNavHistory] = useState<string[]>(["home"]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -73,6 +79,15 @@ export default function App() {
     if (getAutoSyncPreference() && supabaseConnected) return;
     saveStateToStorage(state);
   }, [state, supabaseConnected]);
+
+  // If auto-sync is enabled, never restore stale browser cache on refresh.
+  useEffect(() => {
+    if (!getAutoSyncPreference()) return;
+    const localFallback = loadInitialState();
+    if (JSON.stringify(localFallback) !== JSON.stringify(DEFAULT_STATE)) {
+      saveStateToStorage(DEFAULT_STATE);
+    }
+  }, []);
 
   // Check Supabase connection on startup
   useEffect(() => {
