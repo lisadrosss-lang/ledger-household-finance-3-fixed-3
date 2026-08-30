@@ -65,6 +65,8 @@ export default function App() {
   // no need to immediately push it back).
   const skipNextAutoPush = React.useRef(true);
   const autoPushTimeout = React.useRef<number | null>(null);
+  const pushInFlightTime = React.useRef<number>(0);
+  const lastRemotePullTime = React.useRef<number>(0);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -126,8 +128,8 @@ export default function App() {
     };
   }, []);
 
-  // Auto-sync: listen for server push events and keep polling as a fallback so
-  // other devices update this browser immediately and also recover if the stream briefly drops.
+  // Auto-sync: listen for server push events only (no aggressive polling).
+  // If a push just happened, skip the pull to avoid reverting unsaved edits.
   useEffect(() => {
     if (!getAutoSyncPreference()) return;
 
@@ -135,9 +137,17 @@ export default function App() {
 
     const applyRemoteState = async () => {
       try {
+        // Skip pulling if we just pushed within the last 2.5 seconds.
+        // This gives the push time to complete before we pull new state.
+        const now = Date.now();
+        if (now - pushInFlightTime.current < 2500) {
+          return;
+        }
+
         const remote = await supabasePullAll();
         if (cancelled || !remote || Object.keys(remote).length === 0) return;
 
+        lastRemotePullTime.current = now;
         setState((prev) => {
           const next = {
             ...prev,
@@ -154,17 +164,15 @@ export default function App() {
       applyRemoteState();
     });
 
-    applyRemoteState();
-    const intervalId = window.setInterval(applyRemoteState, 12000);
-
     return () => {
       cancelled = true;
       stopListening();
-      window.clearInterval(intervalId);
     };
-  }, [showToast]);
+  }, []);
+
 
   // Auto-sync: push to the cloud shortly after any change, if auto-sync is on.
+  // Mark the push time so the pull listener knows to wait before fetching.
   useEffect(() => {
     const shouldSkipThisRun = skipNextAutoPush.current;
     skipNextAutoPush.current = false;
@@ -175,6 +183,7 @@ export default function App() {
       window.clearTimeout(autoPushTimeout.current);
     }
     autoPushTimeout.current = window.setTimeout(() => {
+      pushInFlightTime.current = Date.now();
       supabasePushAll(state).catch((e: any) => {
         console.error("Auto-push failed:", e);
         showToast(`Cloud auto-sync error: ${e.message || "failed to push"}`);
@@ -186,7 +195,7 @@ export default function App() {
         window.clearTimeout(autoPushTimeout.current);
       }
     };
-  }, [state]);
+  }, [state, showToast]);
   const currentView = navHistory[navHistory.length - 1] || "home";
   const [baseView, viewParam] = currentView.split(":");
 
