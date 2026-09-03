@@ -35,15 +35,20 @@ export async function optimizeAndConvertToPdf(
 ): Promise<OptimizedFileResult> {
   const originalSize = file.size;
 
+  const fileName = file.name || "document";
+  const lower = fileName.toLowerCase();
+  const isPdfFile = file.type === "application/pdf" || lower.endsWith(".pdf");
+  const isImageFile = file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(lower);
+
   // If already a PDF, read directly
-  if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+  if (isPdfFile) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         const data = reader.result as string;
         resolve({
           data,
-          name: file.name,
+          name: fileName,
           type: "application/pdf",
           originalSize,
           optimizedSize: originalSize,
@@ -56,14 +61,15 @@ export async function optimizeAndConvertToPdf(
     });
   }
 
-  // If it's an image, resize first and then convert to PDF
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+  // If it's a regular image, resize and convert to PDF
+  if (isImageFile) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
 
         // Proportional resizing
         if (width > maxDimension || height > maxDimension) {
@@ -106,36 +112,57 @@ export async function optimizeAndConvertToPdf(
         // Add image to full page bounds
         pdf.addImage(compressedJpegData, "JPEG", 0, 0, width, height, undefined, "FAST");
 
-        const pdfDataUrl = pdf.output("datauristring");
+          const pdfDataUrl = pdf.output("datauristring");
 
-        // Estimate file size
-        const head = pdfDataUrl.indexOf(",") + 1;
-        const optimizedSize = Math.round(((pdfDataUrl.length - head) * 3) / 4);
+          // Estimate file size
+          const head = pdfDataUrl.indexOf(",") + 1;
+          const optimizedSize = Math.round(((pdfDataUrl.length - head) * 3) / 4);
 
-        // Clean filename to .pdf extension
-        const baseName = file.name.replace(/\.[^/.]+$/, "");
-        const pdfName = `${baseName}.pdf`;
+          // Clean filename to .pdf extension
+          const baseName = fileName.replace(/\.[^/.]+$/, "");
+          const pdfName = `${baseName}.pdf`;
 
-        const savingsText =
-          originalSize > optimizedSize
-            ? `${formatFileSize(originalSize)} → ${formatFileSize(optimizedSize)} PDF`
-            : `${formatFileSize(optimizedSize)} PDF`;
+          const savingsText =
+            originalSize > optimizedSize
+              ? `${formatFileSize(originalSize)} → ${formatFileSize(optimizedSize)} PDF`
+              : `${formatFileSize(optimizedSize)} PDF`;
 
-        resolve({
-          data: pdfDataUrl,
-          name: pdfName,
-          type: "application/pdf",
-          originalSize,
-          optimizedSize,
-          savingsText,
-          isPdf: true,
-        });
+          resolve({
+            data: pdfDataUrl,
+            name: pdfName,
+            type: "application/pdf",
+            originalSize,
+            optimizedSize,
+            savingsText,
+            isPdf: true,
+          });
+        };
+
+        img.onerror = () => reject(new Error("Failed to load image for PDF conversion"));
+        img.src = reader.result as string;
       };
 
-      img.onerror = () => reject(new Error("Failed to load image for PDF conversion"));
-      img.src = reader.result as string;
-    };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  }
 
+  // Any other file type: preserve the original file as a generic attachment,
+  // but still make it safe for storage and re-opening later.
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = reader.result as string;
+      resolve({
+        data,
+        name: fileName,
+        type: file.type || "application/octet-stream",
+        originalSize,
+        optimizedSize: originalSize,
+        savingsText: `File (${formatFileSize(originalSize)})`,
+        isPdf: false,
+      });
+    };
     reader.onerror = (err) => reject(err);
     reader.readAsDataURL(file);
   });

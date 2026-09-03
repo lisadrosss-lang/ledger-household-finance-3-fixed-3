@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   X,
 } from "lucide-react";
+import { uploadBillAttachment } from "../../lib/supabase";
 
 interface AddBillViewProps {
   state: AppState;
@@ -182,15 +183,28 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const optimized = await optimizeAndConvertToPdf(file);
-      setAttachedPhoto({
-        type: optimized.type,
-        name: optimized.name,
-        data: optimized.data,
-      });
-      onShowToast(`Converted & resized to PDF (${optimized.savingsText})`);
-    } catch {
-      onShowToast("Failed to process attachment");
+      const uploaded = await uploadBillAttachment(file);
+      const photo = {
+        type: file.type || "application/octet-stream",
+        name: file.name,
+        data: uploaded.url,
+      };
+      setAttachedPhoto(photo);
+      onShowToast(file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "PDF uploaded and attached" : "File uploaded and attached");
+    } catch (error: any) {
+      try {
+        const optimized = await optimizeAndConvertToPdf(file);
+        setAttachedPhoto({
+          type: optimized.type,
+          name: optimized.name,
+          data: optimized.data,
+        });
+        onShowToast(`Converted & resized to PDF (${optimized.savingsText})`);
+      } catch {
+        onShowToast(error?.message || "Failed to process attachment");
+      }
+    } finally {
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -259,7 +273,7 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,application/pdf"
+        accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,application/*"
         className="hidden"
         onChange={handleFileChange}
       />
@@ -685,7 +699,7 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
             <input
               ref={manualFileRef}
               type="file"
-              accept="image/*,application/pdf"
+              accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,application/*"
               className="hidden"
               onChange={handleManualAttachment}
             />

@@ -10,6 +10,7 @@ import {
 import {
   testSupabaseConnection,
   supabasePullAll,
+  supabasePushAll,
   getAutoSyncPreference,
   subscribeToSyncEvents,
 } from "./lib/supabase";
@@ -203,14 +204,15 @@ export default function App() {
       }
     };
 
+    // Subscribe to SSE events for immediate notifications
     const stopListening = subscribeToSyncEvents(() => {
-      console.log("SSE sync event received");
+      console.log("📨 SSE sync event received, fetching remote state");
       applyRemoteState();
     });
 
     // Poll every 30 seconds as a fallback
     const pollIntervalId = window.setInterval(() => {
-      console.log("Polling for remote updates (fallback)");
+      console.log("🔄 Polling for remote updates (fallback)");
       applyRemoteState();
     }, 30000);
 
@@ -234,11 +236,16 @@ export default function App() {
       window.clearTimeout(autoPushTimeout.current);
     }
     autoPushTimeout.current = window.setTimeout(() => {
+      console.log("⏰ Auto-push timer fired, pushing state...");
       pushInFlightTime.current = Date.now();
-      supabasePushAll(state).catch((e: any) => {
-        console.error("Auto-push failed:", e);
-        showToast(`Cloud auto-sync error: ${e.message || "failed to push"}`);
-      });
+      supabasePushAll(state)
+        .then(() => {
+          console.log("✅ Auto-push succeeded");
+        })
+        .catch((e: any) => {
+          console.error("❌ Auto-push failed:", e);
+          showToast(`Cloud sync error: ${e.message || "failed to push"}`);
+        });
     }, 1500);
 
     return () => {

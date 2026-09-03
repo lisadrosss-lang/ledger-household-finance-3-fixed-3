@@ -75,10 +75,59 @@ export async function testSupabaseConnection(): Promise<{
 }
 
 /**
+ * Uploads a bill document to Supabase Storage via the secure backend proxy.
+ * Returns a publicly accessible URL that can be stored in the bill row.
+ */
+export async function uploadBillAttachment(file: File): Promise<{
+  url: string;
+  path: string;
+  name: string;
+  type: string;
+}> {
+  const reader = new FileReader();
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read file for upload"));
+    reader.readAsDataURL(file);
+  });
+
+  const response = await fetch("/api/storage/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fileName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      dataUrl,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || `Attachment upload failed with status ${response.status}`);
+  }
+
+  return {
+    url: payload.url,
+    path: payload.path,
+    name: payload.name || file.name,
+    type: payload.type || file.type || "application/octet-stream",
+  };
+}
+
+/**
  * Pushes entire application state securely to Supabase via server-side API proxy.
  * Secret keys remain safely isolated on the backend.
  */
 export async function supabasePushAll(state: AppState): Promise<{ success: boolean; message: string }> {
+  console.log("📤 Pushing state to /api/sync/push...", {
+    billCount: state.bills?.length || 0,
+    categoryCount: state.categories?.length || 0,
+    accountCount: state.accounts?.length || 0,
+  });
+  
   const response = await fetch("/api/sync/push", {
     method: "POST",
     headers: {
@@ -89,10 +138,13 @@ export async function supabasePushAll(state: AppState): Promise<{ success: boole
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `Server sync failed with status ${response.status}`);
+    const errorMsg = err.error || `Server sync failed with status ${response.status}`;
+    console.error("❌ Push failed:", errorMsg);
+    throw new Error(errorMsg);
   }
 
   const result = await response.json();
+  console.log("✅ Push succeeded:", result.message);
   return {
     success: true,
     message: result.message || "All financial records successfully synced to Supabase.",

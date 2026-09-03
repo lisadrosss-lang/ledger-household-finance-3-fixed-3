@@ -96,11 +96,71 @@ function getServerSupabase(): SupabaseClient | null {
 export async function createApiApp(): Promise<express.Express> {
   const app = express();
 
-  app.use(express.json({ limit: "15mb" }));
+  app.use(express.json({ limit: "25mb" }));
 
   // Health endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Upload a bill attachment to Supabase Storage and return a stable URL.
+  app.post("/api/storage/upload", async (req, res) => {
+    try {
+      const { dataUrl, fileName, mimeType } = req.body || {};
+      if (!dataUrl || typeof dataUrl !== "string") {
+        return res.status(400).json({ success: false, error: "No file payload provided." });
+      }
+      if (!fileName || typeof fileName !== "string") {
+        return res.status(400).json({ success: false, error: "No file name provided." });
+      }
+
+      const supabase = getServerSupabase();
+      if (!supabase) {
+        return res.status(500).json({
+          success: false,
+          error: "Supabase server connection is not configured for storage uploads.",
+        });
+      }
+
+      const base64Data = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
+      const cleanName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const safePath = `bills/${Date.now()}-${cleanName}`;
+      const buffer = Buffer.from(base64Data, "base64");
+
+      const { error: uploadError } = await supabase.storage
+        .from("app-file")
+        .upload(safePath, buffer, {
+          contentType: mimeType || "application/octet-stream",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.warn("Storage upload failed:", uploadError.message);
+        return res.status(500).json({
+          success: false,
+          error: uploadError.message || "Failed to upload attachment to Supabase Storage.",
+        });
+      }
+
+      const { data: publicUrlData } = supabase.storage.from("app-file").getPublicUrl(safePath);
+      if (!publicUrlData?.publicUrl) {
+        return res.status(500).json({ success: false, error: "Failed to generate public URL for uploaded attachment." });
+      }
+
+      return res.json({
+        success: true,
+        url: publicUrlData.publicUrl,
+        path: safePath,
+        name: fileName,
+        type: mimeType || "application/octet-stream",
+      });
+    } catch (err: any) {
+      console.error("Storage upload error:", err);
+      return res.status(500).json({
+        success: false,
+        error: err?.message || "Failed to upload attachment to storage.",
+      });
+    }
   });
 
   // Server-Sent Events stream for immediate cross-device update notifications.
@@ -219,20 +279,29 @@ export async function createApiApp(): Promise<express.Express> {
           let photoToStore = null;
           if (b.photo) {
             try {
-              const photoStr = typeof b.photo === "string" ? b.photo : JSON.stringify(b.photo);
-              // Warn if photo is very large (>5MB)
-              if (photoStr.length > 5242880) {
-                console.warn(`⚠️  Bill ${b.id} photo is ${(photoStr.length / 1024 / 1024).toFixed(1)}MB - may cause sync issues`);
+              if (typeof b.photo === "string") {
+                const trimmed = b.photo.trim();
+                if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                  photoToStore = JSON.parse(trimmed);
+                } else {
+                  photoToStore = trimmed;
+                }
               } else {
-                console.log(`📄 Bill ${b.id} photo: ${(photoStr.length / 1024).toFixed(1)}KB`);
+                photoToStore = b.photo;
               }
-              photoToStore = photoStr;
+
+              const photoPayload = typeof photoToStore === "string" ? photoToStore : JSON.stringify(photoToStore ?? {});
+              if (photoPayload.length > 5242880) {
+                console.warn(`⚠️  Bill ${b.id} photo is ${(photoPayload.length / 1024 / 1024).toFixed(1)}MB - may cause sync issues`);
+              } else {
+                console.log(`📄 Bill ${b.id} photo: ${(photoPayload.length / 1024).toFixed(1)}KB`);
+              }
             } catch (e) {
               console.warn(`Failed to serialize photo for bill ${b.id}:`, e);
               photoToStore = null;
             }
           }
-          
+
           return {
             id: Number(b.id),
             name: normalizeLegacyLabel(b.name) || b.name || "Untitled Bill",
@@ -388,9 +457,29 @@ export async function createApiApp(): Promise<express.Express> {
             let photo = null;
             if (row.photo) {
               try {
-                photo = typeof row.photo === "string" ? JSON.parse(row.photo) : row.photo;
+                if (typeof row.photo === "string") {
+                  const trimmed = row.photo.trim();
+                  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                    const parsed = JSON.parse(trimmed);
+                    photo = parsed && typeof parsed === "object" ? parsed : null;
+                  } else if (trimmed.startsWith("data:")) {
+                    photo = {
+                      type: "application/pdf",
+                      name: "document.pdf",
+                      data: trimmed,
+                    };
+                  }
+                } else if (row.photo && typeof row.photo === "object") {
+                  photo = row.photo;
+                }
               } catch {
-                photo = null;
+                if (typeof row.photo === "string" && row.photo.startsWith("data:")) {
+                  photo = {
+                    type: "application/pdf",
+                    name: "document.pdf",
+                    data: row.photo,
+                  };
+                }
               }
             }
             let payments = [];

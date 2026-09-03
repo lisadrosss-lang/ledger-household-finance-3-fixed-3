@@ -28,6 +28,7 @@ import {
   generateSingleIcs,
   downloadIcsFile,
 } from "../../lib/calendar";
+import { uploadBillAttachment } from "../../lib/supabase";
 
 interface BillDetailViewProps {
   billId: number;
@@ -164,14 +165,25 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const optimized = await optimizeAndConvertToPdf(file, 1600, 0.82);
+      const uploaded = await uploadBillAttachment(file);
       onUpdateBill({
         ...bill,
-        photo: { type: optimized.type, name: optimized.name, data: optimized.data },
+        photo: { type: file.type || "application/octet-stream", name: file.name, data: uploaded.url },
       });
-      onShowToast(`Converted to PDF (${optimized.savingsText})`);
-    } catch {
-      onShowToast("Failed to process attachment");
+      onShowToast(file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "PDF uploaded and attached" : "File uploaded and attached");
+    } catch (error: any) {
+      try {
+        const optimized = await optimizeAndConvertToPdf(file, 1600, 0.82);
+        onUpdateBill({
+          ...bill,
+          photo: { type: optimized.type, name: optimized.name, data: optimized.data },
+        });
+        onShowToast(`Converted to PDF (${optimized.savingsText})`);
+      } catch {
+        onShowToast(error?.message || "Failed to process attachment");
+      }
+    } finally {
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -352,13 +364,43 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : bill.photo.type.startsWith("image/") ? (
               <div className="relative group">
                 <img
                   src={bill.photo.data}
                   alt="Attached invoice"
                   className="w-full rounded-xl max-h-56 object-contain bg-black/5"
                 />
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl p-4 border border-[#7C3AED]/20 shadow-xs flex flex-col items-center text-center space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-[#7C3AED]/10 text-[#7C3AED] flex items-center justify-center">
+                  <FileText size={24} />
+                </div>
+                <div className="min-w-0 max-w-full">
+                  <div className="text-xs font-extrabold text-[#2B2740] truncate max-w-[260px]">
+                    {bill.photo.name}
+                  </div>
+                  <div className="text-[11px] text-[#2E9E71] font-semibold">
+                    Attached file
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleOpenDocument(bill.photo!.data, bill.photo!.name)}
+                    className="px-3.5 py-1.5 rounded-full bg-[#7C3AED] text-white text-xs font-bold hover:bg-[#6D3AED] flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <ExternalLink size={12} />
+                    <span>Open file</span>
+                  </button>
+                  <button
+                    onClick={() => handleDownloadDocument(bill.photo!.data, bill.photo!.name)}
+                    className="px-3.5 py-1.5 rounded-full bg-black/5 text-[#2B2740] text-xs font-bold hover:bg-black/10 flex items-center gap-1.5 transition-all"
+                  >
+                    <Download size={12} />
+                    <span>Download</span>
+                  </button>
+                </div>
               </div>
             )}
             <div className="flex justify-between items-center text-xs text-[#2B2740]/60 pt-1">
@@ -400,7 +442,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
         <input
           ref={photoInputRef}
           type="file"
-          accept="image/*,application/pdf"
+          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,application/*"
           className="hidden"
           onChange={handlePhotoUpload}
         />
