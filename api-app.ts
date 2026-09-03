@@ -316,7 +316,6 @@ export async function createApiApp(): Promise<express.Express> {
             year: parseInt(b.year, 10) || 2026,
             timing: b.timing || "upcoming",
             photo: photoToStore,
-            photos: Array.isArray(photoToStore) ? photoToStore : photoToStore ? [photoToStore] : [],
             logo: b.logo || null,
             payment_plan: !!b.paymentPlan,
             notes: b.notes || "",
