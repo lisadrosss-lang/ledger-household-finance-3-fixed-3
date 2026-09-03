@@ -65,6 +65,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
 
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentBy, setPaymentBy] = useState("");
+  const [attachmentCount, setAttachmentCount] = useState((bill?.photos?.length || (bill?.photo ? 1 : 0)));
   const [isPlan, setIsPlan] = useState(bill?.paymentPlan || false);
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [editPaymentAmount, setEditPaymentAmount] = useState("");
@@ -221,20 +222,33 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const existingPhotos = bill.photos || (bill.photo ? [bill.photo] : []);
+    if (existingPhotos.length >= 3) {
+      onShowToast("A bill can have up to 3 pages");
+      e.target.value = "";
+      return;
+    }
     try {
       const uploaded = await uploadBillAttachment(file);
+      const photos = [...existingPhotos, {
+        type: file.type || "application/octet-stream", name: file.name, data: uploaded.url,
+      }].slice(0, 3);
       onUpdateBill({
         ...bill,
-        photo: { type: file.type || "application/octet-stream", name: file.name, data: uploaded.url },
+        photo: photos[0] || null,
+        photos,
       });
+      setAttachmentCount(photos.length);
       onShowToast(file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "PDF uploaded and attached" : "File uploaded and attached");
     } catch (error: any) {
       try {
         const optimized = await optimizeAndConvertToPdf(file, 1600, 0.82);
         onUpdateBill({
           ...bill,
-          photo: { type: optimized.type, name: optimized.name, data: optimized.data },
+          photo: optimized,
+          photos: [...existingPhotos, optimized].slice(0, 3),
         });
+        setAttachmentCount(Math.min(3, existingPhotos.length + 1));
         onShowToast(`Converted to PDF (${optimized.savingsText})`);
       } catch {
         onShowToast(error?.message || "Failed to process attachment");
@@ -523,7 +537,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
                 onClick={() => photoInputRef.current?.click()}
                 className="text-[#7C3AED] font-bold hover:underline"
               >
-                Replace file
+                {attachmentCount < 3 ? "Add or replace file" : "Replace file"}
               </button>
               <button
                 onClick={() => onUpdateBill({ ...bill, photo: null })}

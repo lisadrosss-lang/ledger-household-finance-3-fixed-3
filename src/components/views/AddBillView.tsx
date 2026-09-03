@@ -48,6 +48,7 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [attachedPhoto, setAttachedPhoto] = useState<BillPhoto | null>(null);
+  const [attachedPhotos, setAttachedPhotos] = useState<BillPhoto[]>([]);
 
   // AI Extraction State
   const [isScanning, setIsScanning] = useState(false);
@@ -182,6 +183,11 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
   const handleManualAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (attachedPhotos.length >= 3) {
+      onShowToast("A bill can have up to 3 pages");
+      e.target.value = "";
+      return;
+    }
     try {
       const uploaded = await uploadBillAttachment(file);
       const photo = {
@@ -189,16 +195,19 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
         name: file.name,
         data: uploaded.url,
       };
+      setAttachedPhotos((current) => current.length < 3 ? [...current, photo] : current);
       setAttachedPhoto(photo);
       onShowToast(file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "PDF uploaded and attached" : "File uploaded and attached");
     } catch (error: any) {
       try {
         const optimized = await optimizeAndConvertToPdf(file);
-        setAttachedPhoto({
+        const photo = {
           type: optimized.type,
           name: optimized.name,
           data: optimized.data,
-        });
+        };
+        setAttachedPhotos((current) => current.length < 3 ? [...current, photo] : current);
+        setAttachedPhoto(photo);
         onShowToast(`Converted & resized to PDF (${optimized.savingsText})`);
       } catch {
         onShowToast(error?.message || "Failed to process attachment");
@@ -246,6 +255,7 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
       year,
       timing,
       photo: attachedPhoto,
+      photos: attachedPhotos.length > 0 ? attachedPhotos : attachedPhoto ? [attachedPhoto] : [],
       logo: null,
       paymentPlan: false,
       notes: notes.trim(),
@@ -703,14 +713,14 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
               className="hidden"
               onChange={handleManualAttachment}
             />
-            {attachedPhoto ? (
+            {attachedPhotos.length > 0 ? (
               <div className="p-3 rounded-xl bg-[#7C3AED]/5 border border-[#7C3AED]/30 flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-[#7C3AED] text-white flex items-center justify-center flex-shrink-0">
                     <FileText size={16} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-[#2B2740] truncate">{attachedPhoto.name}</div>
+                    <div className="text-xs font-bold text-[#2B2740] truncate">{attachedPhotos.length} of 3 pages attached</div>
                     <div className="text-[10px] text-[#2E9E71] font-bold flex items-center gap-1">
                       <CheckCircle2 size={10} /> Converted & attached as PDF
                     </div>
@@ -718,7 +728,7 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setAttachedPhoto(null)}
+                  onClick={() => { setAttachedPhoto(null); setAttachedPhotos([]); }}
                   className="text-xs font-bold text-[#E5484D] hover:underline flex-shrink-0 ml-2"
                 >
                   Remove
@@ -731,7 +741,7 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
                 className="w-full p-3 rounded-xl border border-dashed border-black/20 text-xs font-bold text-[#7C3AED] hover:bg-[#7C3AED]/5 flex items-center justify-center gap-1.5 transition-all"
               >
                 <FileText size={14} />
-                <span>+ Attach Photo or PDF Invoice</span>
+                <span>+ Attach Photo or PDF Invoice (up to 3 pages)</span>
               </button>
             )}
           </div>

@@ -35,6 +35,7 @@ export interface Bill {
   year: number;
   timing: "overdue" | "upcoming";
   photo: BillPhoto | null;
+  photos?: BillPhoto[];
   logo: string | null;
   paymentPlan: boolean;
   notes: string;

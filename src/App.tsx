@@ -248,12 +248,17 @@ export default function App() {
     pushInFlightTime.current = Date.now();
     autoPushTimeout.current = window.setTimeout(() => {
       console.log("⏰ Auto-push timer fired, pushing state...");
+      // Start the protection window again at the actual network request.
+      pushInFlightTime.current = Date.now();
       supabasePushAll(state)
         .then(() => {
-          localChangePending.current = false;
+          window.setTimeout(() => {
+            localChangePending.current = false;
+          }, 3000);
           console.log("✅ Auto-push succeeded");
         })
         .catch((e: any) => {
+          localChangePending.current = false;
           console.error("❌ Auto-push failed:", e);
           showToast(`Cloud sync error: ${e.message || "failed to push"}`);
         });

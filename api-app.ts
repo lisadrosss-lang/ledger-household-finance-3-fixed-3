@@ -279,17 +279,18 @@ export async function createApiApp(): Promise<express.Express> {
       if (Array.isArray(normalizedState.bills) && normalizedState.bills.length > 0) {
         const billRows = normalizedState.bills.map((b: any) => {
           let photoToStore = null;
-          if (b.photo) {
+          const attachmentValue = Array.isArray(b.photos) && b.photos.length > 0 ? b.photos : b.photo;
+          if (attachmentValue) {
             try {
-              if (typeof b.photo === "string") {
-                const trimmed = b.photo.trim();
+              if (typeof attachmentValue === "string") {
+                const trimmed = attachmentValue.trim();
                 if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
                   photoToStore = JSON.parse(trimmed);
                 } else {
                   photoToStore = trimmed;
                 }
               } else {
-                photoToStore = b.photo;
+                photoToStore = attachmentValue;
               }
 
               const photoPayload = typeof photoToStore === "string" ? photoToStore : JSON.stringify(photoToStore ?? {});
@@ -315,6 +316,7 @@ export async function createApiApp(): Promise<express.Express> {
             year: parseInt(b.year, 10) || 2026,
             timing: b.timing || "upcoming",
             photo: photoToStore,
+            photos: Array.isArray(photoToStore) ? photoToStore : photoToStore ? [photoToStore] : [],
             logo: b.logo || null,
             payment_plan: !!b.paymentPlan,
             notes: b.notes || "",
@@ -502,13 +504,15 @@ export async function createApiApp(): Promise<express.Express> {
         if (!billErr && billData && billData.length > 0) {
           updates.bills = billData.map((row: any) => {
             let photo = null;
+            let photos: any[] = [];
             if (row.photo) {
               try {
                 if (typeof row.photo === "string") {
                   const trimmed = row.photo.trim();
                   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
                     const parsed = JSON.parse(trimmed);
-                    photo = parsed && typeof parsed === "object" ? parsed : null;
+                    photos = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed] : [];
+                    photo = photos[0] || null;
                   } else if (trimmed.startsWith("data:")) {
                     photo = {
                       type: "application/pdf",
@@ -517,7 +521,8 @@ export async function createApiApp(): Promise<express.Express> {
                     };
                   }
                 } else if (row.photo && typeof row.photo === "object") {
-                  photo = row.photo;
+                  photos = Array.isArray(row.photo) ? row.photo : [row.photo];
+                  photo = photos[0] || null;
                 }
               } catch {
                 if (typeof row.photo === "string" && row.photo.startsWith("data:")) {
@@ -548,6 +553,7 @@ export async function createApiApp(): Promise<express.Express> {
               year: parseInt(row.year, 10) || 2026,
               timing: row.timing === "overdue" ? "overdue" : "upcoming",
               photo,
+              photos,
               logo: row.logo || null,
               paymentPlan: !!(row.payment_plan ?? row.paymentPlan),
               notes: row.notes || "",
