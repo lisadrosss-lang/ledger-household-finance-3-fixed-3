@@ -361,36 +361,49 @@ export async function createApiApp(): Promise<express.Express> {
         try {
           const { error: grocErr } = await supabase.from("groceries").upsert(
             {
-              id: "main",
+              id: 1,
               budget: normalizedState.groceries.budget || 400,
               entries: normalizedState.groceries.entries || [],
               updated_at: new Date().toISOString(),
             },
             { onConflict: "id" }
           );
-          if (!grocErr) results.push("Groceries");
+          if (grocErr) {
+            throw grocErr;
+          }
+          results.push("Groceries");
         } catch (grocEx: any) {
           console.warn("Groceries sync warning:", grocEx?.message);
+          return res.status(500).json({
+            success: false,
+            error: `Groceries sync failed: ${grocEx?.message || "database write failed"}`,
+          });
         }
       }
 
       // 5. App Settings
       try {
-        await supabase.from("app_settings").upsert(
+        const { error: settingsError } = await supabase.from("app_settings").upsert(
           {
-            id: "global",
+            id: 1,
             verse: normalizedState.verse || null,
             subscriptions: normalizedState.subscriptions || [],
             currency: normalizedState.currency || { code: "EUR", symbol: "€" },
             language: normalizedState.language || "en",
-            monthly_budget_cap: normalizedState.monthlyBudgetCap || 2500,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "id" }
         );
+        if (settingsError) {
+          throw settingsError;
+        }
         results.push("Settings");
       } catch (setEx: any) {
         console.warn("Settings sync warning:", setEx?.message);
+        return res.status(500).json({
+          success: false,
+          error: `Settings sync failed: ${setEx?.message || "database write failed"}`,
+        });
       }
 
       console.log(`✅ Sync complete. Broadcasting to ${syncSubscribers.size} connected device(s): ${results.join(", ")}`);

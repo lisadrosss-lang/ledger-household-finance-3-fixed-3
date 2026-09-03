@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS public.accounts (
 
 -- 4. Groceries Table
 CREATE TABLE IF NOT EXISTS public.groceries (
-  id TEXT PRIMARY KEY,
+  id BIGINT PRIMARY KEY,
   budget NUMERIC(10, 2) DEFAULT 400.00,
   entries JSONB DEFAULT '[]'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS public.groceries (
 
 -- 5. App Settings Table
 CREATE TABLE IF NOT EXISTS public.app_settings (
-  id TEXT PRIMARY KEY,
+  id BIGINT PRIMARY KEY,
   verse JSONB,
   subscriptions JSONB,
   currency JSONB,

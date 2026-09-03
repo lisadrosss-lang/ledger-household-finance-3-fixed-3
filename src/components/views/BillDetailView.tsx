@@ -365,12 +365,21 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
                 </div>
               </div>
             ) : bill.photo.type.startsWith("image/") ? (
-              <div className="relative group">
-                <img
-                  src={bill.photo.data}
-                  alt="Attached invoice"
-                  className="w-full rounded-xl max-h-56 object-contain bg-black/5"
-                />
+              <div className="space-y-2">
+                <div className="relative group">
+                  <img
+                    src={bill.photo.data}
+                    alt="Attached invoice"
+                    className="w-full rounded-xl max-h-56 object-contain bg-black/5"
+                  />
+                </div>
+                <button
+                  onClick={() => handleDownloadDocument(bill.photo!.data, bill.photo!.name)}
+                  className="w-full px-3.5 py-1.5 rounded-full bg-black/5 text-[#2B2740] text-xs font-bold hover:bg-black/10 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Download size={12} />
+                  <span>Download image</span>
+                </button>
               </div>
             ) : (
               <div className="bg-white rounded-xl p-4 border border-[#7C3AED]/20 shadow-xs flex flex-col items-center text-center space-y-2">
