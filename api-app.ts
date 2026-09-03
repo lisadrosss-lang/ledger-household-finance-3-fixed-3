@@ -269,6 +269,7 @@ export async function createApiApp(): Promise<express.Express> {
         const { error: catErr } = await supabase.from("categories").upsert(catRows, { onConflict: "id" });
         if (catErr) {
           console.warn("Categories sync warning:", catErr.message);
+          return res.status(500).json({ success: false, error: `Categories sync failed: ${catErr.message}` });
         } else {
           results.push(`Categories (${catRows.length})`);
         }
@@ -329,6 +330,7 @@ export async function createApiApp(): Promise<express.Express> {
         const { error: billErr } = await supabase.from("bills").upsert(billRows, { onConflict: "id" });
         if (billErr) {
           console.warn("Bills sync warning:", billErr.message);
+          return res.status(500).json({ success: false, error: `Bills sync failed: ${billErr.message}` });
         } else {
           results.push(`Bills (${billRows.length})`);
         }

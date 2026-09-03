@@ -238,9 +238,10 @@ export default function App() {
     if (autoPushTimeout.current) {
       window.clearTimeout(autoPushTimeout.current);
     }
+    // Block background pulls while this local change is waiting to be pushed.
+    pushInFlightTime.current = Date.now();
     autoPushTimeout.current = window.setTimeout(() => {
       console.log("⏰ Auto-push timer fired, pushing state...");
-      pushInFlightTime.current = Date.now();
       supabasePushAll(state)
         .then(() => {
           console.log("✅ Auto-push succeeded");
@@ -579,6 +580,7 @@ export default function App() {
             <BillDetailView
               billId={Number(viewParam)}
               state={state}
+              onNavigate={navigateTo}
               onUpdateBill={handleUpdateBill}
               onDeleteBill={handleDeleteBill}
               onAddPayment={handleAddPayment}

@@ -33,6 +33,7 @@ import { uploadBillAttachment } from "../../lib/supabase";
 interface BillDetailViewProps {
   billId: number;
   state: AppState;
+  onNavigate: (view: string) => void;
   onUpdateBill: (updated: Bill) => void;
   onDeleteBill: (id: number) => void;
   onAddPayment: (billId: number, amount: number, paidBy: string, isPlan: boolean) => void;
@@ -44,6 +45,7 @@ interface BillDetailViewProps {
 export const BillDetailView: React.FC<BillDetailViewProps> = ({
   billId,
   state,
+  onNavigate,
   onUpdateBill,
   onDeleteBill,
   onAddPayment,
@@ -54,6 +56,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
   const bill = state.bills.find((b) => b.id === billId);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editName, setEditName] = useState(bill?.name || "");
+  const [editCategory, setEditCategory] = useState(bill?.category || "");
   const [editDueIso, setEditDueIso] = useState(dueToISO(bill?.due || "", bill?.year || CURRENT_YEAR));
   const [editIban, setEditIban] = useState(bill?.iban || "");
   const [editRef, setEditRef] = useState(bill?.reference || "");
@@ -105,6 +108,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
     const updated: Bill = {
       ...bill,
       name: editName.trim() || bill.name,
+      category: editCategory || bill.category,
       due,
       month,
       year,
@@ -114,6 +118,9 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
     onUpdateBill(updated);
     setIsEditingDetails(false);
     onShowToast("Bill details updated");
+    if (updated.category) {
+      onNavigate(`company:${updated.category}`);
+    }
   };
 
   const handleAddPaymentSubmit = () => {
@@ -270,6 +277,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
         <button
           onClick={() => {
             setEditName(bill.name);
+            setEditCategory(bill.category);
             setEditDueIso(dueToISO(bill.due, bill.year));
             setEditIban(bill.iban || "");
             setEditRef(bill.reference || "");
@@ -293,6 +301,18 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
               onChange={(e) => setEditName(e.target.value)}
               className="w-full p-2.5 rounded-xl border border-black/10 text-sm focus:outline-none focus:border-[#7C3AED]"
             />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Category</div>
+            <select
+              value={editCategory}
+              onChange={(e) => setEditCategory(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-black/10 text-sm bg-white focus:outline-none focus:border-[#7C3AED]"
+            >
+              {state.categories.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Due date</div>
