@@ -224,7 +224,7 @@ export const DEFAULT_STATE: AppState = {
   bills: DEFAULT_BILLS,
   accounts: DEFAULT_ACCOUNTS,
   groceries: DEFAULT_GROCERIES,
-  verse: { text: "God will supply all our needs.", reference: "Philippians 4:19" },
+  verse: { text: "Trust in the Lord with all your heart and do not rely on your own understanding.", reference: "Proverbs 3:5" },
   subscriptions: { business: true, personal: true },
   currency: { code: "EUR", symbol: "€" },
   language: "en",
@@ -280,7 +280,10 @@ export function loadInitialState(): AppState {
         })),
         accounts,
         groceries: parsed.groceries || DEFAULT_GROCERIES,
-        verse: parsed.verse || DEFAULT_STATE.verse,
+        verse:
+          parsed.verse?.text === "God will supply all our needs." && parsed.verse?.reference === "Philippians 4:19"
+            ? DEFAULT_STATE.verse
+            : parsed.verse || DEFAULT_STATE.verse,
         subscriptions: parsed.subscriptions || DEFAULT_STATE.subscriptions,
         currency: parsed.currency || DEFAULT_STATE.currency,
         language: parsed.language || DEFAULT_STATE.language,
