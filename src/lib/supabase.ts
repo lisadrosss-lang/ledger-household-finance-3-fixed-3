@@ -241,9 +241,24 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
   subscriptions JSONB,
   currency JSONB,
   language TEXT DEFAULT 'en',
+  login_notes JSONB DEFAULT '[]'::jsonb,
   monthly_budget_cap NUMERIC(10, 2) DEFAULT 2500.00,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 6. Login details
+CREATE TABLE IF NOT EXISTS public.login_notes (
+  id BIGINT PRIMARY KEY,
+  title TEXT NOT NULL,
+  username TEXT DEFAULT '',
+  password TEXT DEFAULT '',
+  notes TEXT DEFAULT '',
+  url TEXT DEFAULT '',
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS login_notes JSONB DEFAULT '[]'::jsonb;
 
 -- Enable Row Level Security (RLS) with NO public policies.
 -- The app never talks to Supabase from the browser — every read/write goes
@@ -258,5 +273,7 @@ ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.groceries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.login_notes ENABLE ROW LEVEL SECURITY;
+
 `;
 }

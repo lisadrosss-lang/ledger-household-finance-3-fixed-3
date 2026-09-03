@@ -406,6 +406,36 @@ export async function createApiApp(): Promise<express.Express> {
         });
       }
 
+      // 6. Login details
+      try {
+        const loginNotes = Array.isArray(normalizedState.loginNotes) ? normalizedState.loginNotes : [];
+        const existingNotesQuery = supabase.from("login_notes").delete();
+        const { error: staleNotesError } = loginNotes.length > 0
+          ? await existingNotesQuery.not("id", "in", `(${loginNotes.map((note: any) => Number(note.id)).join(",")})`)
+          : await existingNotesQuery.gte("id", 0);
+        if (staleNotesError) throw staleNotesError;
+        const { error: loginNotesError } = await supabase.from("login_notes").upsert(
+          loginNotes.map((note: any) => ({
+            id: Number(note.id),
+            title: note.title || "Untitled login",
+            username: note.username || "",
+            password: note.password || "",
+            notes: note.notes || "",
+            url: note.url || "",
+            updated_at: new Date().toISOString(),
+          })),
+          { onConflict: "id" }
+        );
+        if (loginNotesError) throw loginNotesError;
+        results.push("Login details");
+      } catch (loginNotesEx: any) {
+        console.warn("Login details sync warning:", loginNotesEx?.message);
+        return res.status(500).json({
+          success: false,
+          error: `Login details sync failed: ${loginNotesEx?.message || "database write failed"}`,
+        });
+      }
+
       console.log(`✅ Sync complete. Broadcasting to ${syncSubscribers.size} connected device(s): ${results.join(", ")}`);
       broadcastSyncEvent();
 
@@ -578,6 +608,26 @@ export async function createApiApp(): Promise<express.Express> {
         }
       } catch (e: any) {
         console.warn("Pull settings warning:", e?.message);
+      }
+
+      // 6. Login details
+      try {
+        const { data: loginNotesData, error: loginNotesErr } = await supabase
+          .from("login_notes")
+          .select("*")
+          .order("updated_at", { ascending: false });
+        if (!loginNotesErr && loginNotesData) {
+          updates.loginNotes = loginNotesData.map((row: any) => ({
+            id: Number(row.id),
+            title: row.title || "Untitled login",
+            username: row.username || "",
+            password: row.password || "",
+            notes: row.notes || "",
+            url: row.url || "",
+          }));
+        }
+      } catch (e: any) {
+        console.warn("Pull login details warning:", e?.message);
       }
 
       return res.json({

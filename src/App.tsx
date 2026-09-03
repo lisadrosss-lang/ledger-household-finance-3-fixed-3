@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { AppState, Bill, Category, Account, GroceriesState } from "./types";
+import { AppState, Bill, Category, Account, GroceriesState, LoginNote } from "./types";
 import {
   loadInitialState,
   saveStateToStorage,
@@ -30,6 +30,7 @@ import { HubView } from "./components/views/HubView";
 import { MonthlyFeedbackView } from "./components/views/MonthlyFeedbackView";
 import { BillReminderModal } from "./components/BillReminderModal";
 import { PasswordGateView } from "./components/views/PasswordGateView";
+import { LoginNotesView } from "./components/views/LoginNotesView";
 import { Plus } from "lucide-react";
 
 export default function App() {
@@ -136,6 +137,7 @@ export default function App() {
           if (remote.categories) next.categories = remote.categories;
           if (remote.accounts) next.accounts = remote.accounts;
           if (remote.groceries) next.groceries = remote.groceries;
+          if (remote.loginNotes) next.loginNotes = remote.loginNotes;
           if (remote.verse) next.verse = remote.verse;
           if (remote.subscriptions) next.subscriptions = remote.subscriptions;
           if (remote.currency) next.currency = remote.currency;
@@ -191,6 +193,7 @@ export default function App() {
           if (remote.categories) next.categories = remote.categories;
           if (remote.accounts) next.accounts = remote.accounts;
           if (remote.groceries) next.groceries = remote.groceries;
+          if (remote.loginNotes) next.loginNotes = remote.loginNotes;
           if (remote.verse) next.verse = remote.verse;
           if (remote.subscriptions) next.subscriptions = remote.subscriptions;
           if (remote.currency) next.currency = remote.currency;
@@ -455,6 +458,10 @@ export default function App() {
     }));
   };
 
+  const handleUpdateLoginNotes = (loginNotes: LoginNote[]) => {
+    setState((prev) => ({ ...prev, loginNotes }));
+  };
+
   const handleApplyRemoteState = (updates: Partial<AppState>) => {
     setState((prev) => ({
       ...prev,
@@ -487,6 +494,7 @@ export default function App() {
     if (baseView === "sync") return "Sync";
     if (baseView === "addbill") return "Add a bill";
     if (baseView === "settings") return "Settings";
+    if (baseView === "login-notes") return "Login details";
     if (baseView === "hub") return "More pages";
     return "Ledger";
   };
@@ -645,6 +653,12 @@ export default function App() {
               state={state}
               onUpdateCurrency={(curr) => setState((prev) => ({ ...prev, currency: curr }))}
               onUpdateLanguage={(lang) => setState((prev) => ({ ...prev, language: lang }))}
+              onShowToast={showToast}
+            />
+          ) : baseView === "login-notes" ? (
+            <LoginNotesView
+              state={state}
+              onUpdateLoginNotes={handleUpdateLoginNotes}
               onShowToast={showToast}
             />
           ) : baseView === "hub" ? (

@@ -185,6 +185,15 @@ export interface ScriptureVerse {
   reference: string;
 }
 
+export interface LoginNote {
+  id: number;
+  title: string;
+  username: string;
+  password: string;
+  notes: string;
+  url: string;
+}
+
 export interface CurrencyConfig {
   code: string;
   symbol: string;
@@ -201,6 +210,7 @@ export interface AppState {
   bills: Bill[];
   accounts: Account[];
   groceries: GroceriesState;
+  loginNotes: LoginNote[];
   verse: ScriptureVerse;
   subscriptions: SubscriptionsState;
   currency: { code: string; symbol: string };

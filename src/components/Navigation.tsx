@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => onNavigate("hub")}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            baseView === "hub" || baseView === "account" || baseView === "settings" || baseView === "feedback"
+            baseView === "hub" || baseView === "account" || baseView === "settings" || baseView === "feedback" || baseView === "login-notes"
               ? "bg-[#B0459E]/12 text-[#7C3AED]"
               : "text-[#2B2740]/60 hover:text-[#2B2740] hover:bg-black/[0.03]"
           }`}
@@ -247,7 +247,7 @@ export const Tabbar: React.FC<TabbarProps> = ({ currentView, onNavigate, lang })
         <button
           onClick={() => onNavigate("hub")}
           className={`flex flex-col items-center gap-1 text-[10px] font-bold min-w-[50px] py-1 transition-colors ${
-            baseView === "hub" || baseView === "account" || baseView === "settings" || baseView === "feedback"
+            baseView === "hub" || baseView === "account" || baseView === "settings" || baseView === "feedback" || baseView === "login-notes"
               ? "text-[#7C3AED]"
               : "text-[#2B2740]/50"
           }`}

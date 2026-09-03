@@ -203,13 +203,23 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
     }
   };
 
-  const handleDownloadDocument = (dataUrl: string, fileName: string) => {
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownloadDocument = async (dataUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(dataUrl);
+      if (!response.ok) throw new Error(`Download failed with status ${response.status}`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Attachment download failed:", error);
+      window.open(dataUrl, "_blank", "noopener,noreferrer");
+      onShowToast("The file opened in a new tab. Use the browser download button to save it.");
+    }
   };
 
   return (

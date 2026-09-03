@@ -339,13 +339,23 @@ export const PersonalBillsSection: React.FC<PersonalBillsSectionProps> = ({
     }
   };
 
-  const handleDownloadPdf = (dataUrl: string, fileName: string) => {
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownloadPdf = async (dataUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(dataUrl);
+      if (!response.ok) throw new Error(`Download failed with status ${response.status}`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Attachment download failed:", error);
+      window.open(dataUrl, "_blank", "noopener,noreferrer");
+      onShowToast("The file opened in a new tab. Use the browser download button to save it.");
+    }
   };
 
   const handleCopyIban = (iban: string) => {

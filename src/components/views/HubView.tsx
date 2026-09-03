@@ -46,6 +46,13 @@ export const HubView: React.FC<HubViewProps> = ({ onNavigate, lang, onOpenRemind
       nav: "account:business",
     },
     {
+      id: "login-notes",
+      label: "Login details",
+      icon: "🔐",
+      desc: "Store and manage usernames, passwords, websites, and private notes.",
+      nav: "login-notes",
+    },
+    {
       id: "settings",
       label: translate("settings", lang),
       icon: "⚙️",

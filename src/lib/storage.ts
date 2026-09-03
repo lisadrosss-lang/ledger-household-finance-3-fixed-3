@@ -224,6 +224,7 @@ export const DEFAULT_STATE: AppState = {
   bills: DEFAULT_BILLS,
   accounts: DEFAULT_ACCOUNTS,
   groceries: DEFAULT_GROCERIES,
+  loginNotes: [],
   verse: { text: "Trust in the Lord with all your heart and do not rely on your own understanding.", reference: "Proverbs 3:5" },
   subscriptions: { business: true, personal: true },
   currency: { code: "EUR", symbol: "€" },
@@ -280,6 +281,7 @@ export function loadInitialState(): AppState {
         })),
         accounts,
         groceries: parsed.groceries || DEFAULT_GROCERIES,
+        loginNotes: Array.isArray(parsed.loginNotes) ? parsed.loginNotes : DEFAULT_STATE.loginNotes,
         verse:
           parsed.verse?.text === "God will supply all our needs." && parsed.verse?.reference === "Philippians 4:19"
             ? DEFAULT_STATE.verse
