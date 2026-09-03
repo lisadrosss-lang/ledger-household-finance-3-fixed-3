@@ -15,7 +15,7 @@ import {
   ArrowLeft,
   X,
 } from "lucide-react";
-import { uploadBillAttachment } from "../../lib/supabase";
+import { uploadBillAttachment, uploadBillAttachmentData } from "../../lib/supabase";
 
 interface AddBillViewProps {
   state: AppState;
@@ -76,25 +76,22 @@ export const AddBillView: React.FC<AddBillViewProps> = ({
       setPreviewThumbnail(base64Data);
 
       try {
-        // Also prepare optimized PDF attachment in parallel
-        optimizeAndConvertToPdf(file)
-          .then((optimized) => {
-            setAttachedPhoto({
-              type: optimized.type,
-              name: optimized.name,
-              data: optimized.data,
-            });
-          })
-          .catch(() => {
-            // Non-blocking attachment fallback
-          });
+        const optimized = await optimizeAndConvertToPdf(file);
+        const uploaded = await uploadBillAttachmentData(
+          optimized.data,
+          optimized.name,
+          optimized.type
+        );
+        const attached = { type: optimized.type, name: optimized.name, data: uploaded.url };
+        setAttachedPhoto(attached);
+        setAttachedPhotos((current) => current.length < 3 ? [...current, attached] : current);
 
         const res = await fetch("/api/gemini/extract-bill", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            image: base64Data,
-            mimeType: file.type || "image/jpeg",
+            image: optimized.data,
+            mimeType: optimized.type,
             categories: state.categories,
             currencySymbol: state.currency.symbol,
           }),

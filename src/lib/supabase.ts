@@ -118,6 +118,29 @@ export async function uploadBillAttachment(file: File, folder = "bills"): Promis
   };
 }
 
+export async function uploadBillAttachmentData(
+  dataUrl: string,
+  fileName: string,
+  mimeType: string,
+  folder = "bills"
+): Promise<{ url: string; path: string; name: string; type: string }> {
+  const response = await fetch("/api/storage/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dataUrl, fileName, mimeType, folder }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || `Attachment upload failed with status ${response.status}`);
+  }
+  return {
+    url: payload.url,
+    path: payload.path,
+    name: payload.name || fileName,
+    type: payload.type || mimeType || "application/octet-stream",
+  };
+}
+
 /**
  * Pushes entire application state securely to Supabase via server-side API proxy.
  * Secret keys remain safely isolated on the backend.
