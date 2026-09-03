@@ -149,9 +149,6 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
     onUpdateBill(updated);
     setIsEditingDetails(false);
     onShowToast("Bill details updated");
-    if (updated.category) {
-      onNavigate(`company:${updated.category}`);
-    }
   };
 
   const handleAddPaymentSubmit = () => {
