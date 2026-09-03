@@ -285,7 +285,9 @@ export function loadInitialState(): AppState {
           ? parsed.loginNotes.map((note: any) => ({ ...note, photo: note.photo || null }))
           : DEFAULT_STATE.loginNotes,
         verse:
-          parsed.verse?.text === "God will supply all our needs." && parsed.verse?.reference === "Philippians 4:19"
+          (parsed.verse?.reference === "Philippians 4:19" ||
+            (parsed.verse?.reference === "Proverbs 3:5" &&
+              parsed.verse?.text === "Trust in the Lord with all your heart and do not rely on your own understanding."))
             ? DEFAULT_STATE.verse
             : parsed.verse || DEFAULT_STATE.verse,
         subscriptions: parsed.subscriptions || DEFAULT_STATE.subscriptions,

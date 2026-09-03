@@ -839,7 +839,7 @@ export const CompanyDetailView: React.FC<CompanyDetailViewProps> = ({
             return (
               <div
                 key={b.id}
-                onClick={() => onNavigate(`billdetail:${b.id}`)}
+                onClick={() => onNavigate(`detail:${b.id}`)}
                 className="bg-white rounded-2xl p-4 shadow-sm border border-black/[0.04] hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3"
               >
                 <div className="min-w-0">
