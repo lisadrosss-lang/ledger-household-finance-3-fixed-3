@@ -519,6 +519,14 @@ export async function createApiApp(): Promise<express.Express> {
                       name: "document.pdf",
                       data: trimmed,
                     };
+                    photos = [photo];
+                  } else if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                    photo = {
+                      type: "application/octet-stream",
+                      name: trimmed.split("/").pop()?.split("?")[0] || "attachment",
+                      data: trimmed,
+                    };
+                    photos = [photo];
                   }
                 } else if (row.photo && typeof row.photo === "object") {
                   photos = Array.isArray(row.photo) ? row.photo : [row.photo];
@@ -531,6 +539,14 @@ export async function createApiApp(): Promise<express.Express> {
                     name: "document.pdf",
                     data: row.photo,
                   };
+                  photos = [photo];
+                } else if (typeof row.photo === "string" && (row.photo.startsWith("http://") || row.photo.startsWith("https://"))) {
+                  photo = {
+                    type: "application/octet-stream",
+                    name: row.photo.split("/").pop()?.split("?")[0] || "attachment",
+                    data: row.photo,
+                  };
+                  photos = [photo];
                 }
               }
             }

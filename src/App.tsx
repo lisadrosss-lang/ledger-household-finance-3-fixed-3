@@ -71,6 +71,11 @@ export default function App() {
   const lastRemotePullTime = React.useRef<number>(0);
   const localChangePending = React.useRef(false);
 
+  const updateLocalState = (updater: React.SetStateAction<AppState>) => {
+    localChangePending.current = true;
+    setState(updater);
+  };
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -293,7 +298,7 @@ export default function App() {
 
   // State update helpers
   const handleUpdateVerse = (text: string, reference: string) => {
-    setState((prev) => ({
+    updateLocalState((prev) => ({
       ...prev,
       verse: { text, reference },
     }));
@@ -484,7 +489,7 @@ export default function App() {
   };
 
   const handleUpdateLoginNotes = (loginNotes: LoginNote[]) => {
-    setState((prev) => ({ ...prev, loginNotes }));
+    updateLocalState((prev) => ({ ...prev, loginNotes }));
   };
 
   const handleApplyRemoteState = (updates: Partial<AppState>) => {
@@ -677,8 +682,8 @@ export default function App() {
           ) : baseView === "settings" ? (
             <SettingsView
               state={state}
-              onUpdateCurrency={(curr) => setState((prev) => ({ ...prev, currency: curr }))}
-              onUpdateLanguage={(lang) => setState((prev) => ({ ...prev, language: lang }))}
+              onUpdateCurrency={(curr) => updateLocalState((prev) => ({ ...prev, currency: curr }))}
+              onUpdateLanguage={(lang) => updateLocalState((prev) => ({ ...prev, language: lang }))}
               onShowToast={showToast}
             />
           ) : baseView === "login-notes" ? (
