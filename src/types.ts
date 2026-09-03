@@ -192,6 +192,7 @@ export interface LoginNote {
   password: string;
   notes: string;
   url: string;
+  photo: string | null;
 }
 
 export interface CurrencyConfig {

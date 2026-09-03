@@ -281,7 +281,9 @@ export function loadInitialState(): AppState {
         })),
         accounts,
         groceries: parsed.groceries || DEFAULT_GROCERIES,
-        loginNotes: Array.isArray(parsed.loginNotes) ? parsed.loginNotes : DEFAULT_STATE.loginNotes,
+        loginNotes: Array.isArray(parsed.loginNotes)
+          ? parsed.loginNotes.map((note: any) => ({ ...note, photo: note.photo || null }))
+          : DEFAULT_STATE.loginNotes,
         verse:
           parsed.verse?.text === "God will supply all our needs." && parsed.verse?.reference === "Philippians 4:19"
             ? DEFAULT_STATE.verse

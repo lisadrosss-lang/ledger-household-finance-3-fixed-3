@@ -106,7 +106,7 @@ export async function createApiApp(): Promise<express.Express> {
   // Upload a bill attachment to Supabase Storage and return a stable URL.
   app.post("/api/storage/upload", async (req, res) => {
     try {
-      const { dataUrl, fileName, mimeType } = req.body || {};
+      const { dataUrl, fileName, mimeType, folder } = req.body || {};
       if (!dataUrl || typeof dataUrl !== "string") {
         return res.status(400).json({ success: false, error: "No file payload provided." });
       }
@@ -124,7 +124,8 @@ export async function createApiApp(): Promise<express.Express> {
 
       const base64Data = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
       const cleanName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const safePath = `bills/${Date.now()}-${cleanName}`;
+      const cleanFolder = typeof folder === "string" && /^[a-zA-Z0-9_-]+$/.test(folder) ? folder : "bills";
+      const safePath = `${cleanFolder}/${Date.now()}-${cleanName}`;
       const buffer = Buffer.from(base64Data, "base64");
 
       const { error: uploadError } = await supabase.storage
@@ -422,6 +423,7 @@ export async function createApiApp(): Promise<express.Express> {
             password: note.password || "",
             notes: note.notes || "",
             url: note.url || "",
+            photo: note.photo || null,
             updated_at: new Date().toISOString(),
           })),
           { onConflict: "id" }
@@ -624,6 +626,7 @@ export async function createApiApp(): Promise<express.Express> {
             password: row.password || "",
             notes: row.notes || "",
             url: row.url || "",
+            photo: row.photo || null,
           }));
         }
       } catch (e: any) {

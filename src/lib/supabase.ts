@@ -78,7 +78,7 @@ export async function testSupabaseConnection(): Promise<{
  * Uploads a bill document to Supabase Storage via the secure backend proxy.
  * Returns a publicly accessible URL that can be stored in the bill row.
  */
-export async function uploadBillAttachment(file: File): Promise<{
+export async function uploadBillAttachment(file: File, folder = "bills"): Promise<{
   url: string;
   path: string;
   name: string;
@@ -100,6 +100,7 @@ export async function uploadBillAttachment(file: File): Promise<{
     body: JSON.stringify({
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
+      folder,
       dataUrl,
     }),
   });
@@ -254,8 +255,12 @@ CREATE TABLE IF NOT EXISTS public.login_notes (
   password TEXT DEFAULT '',
   notes TEXT DEFAULT '',
   url TEXT DEFAULT '',
+  photo TEXT,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE public.login_notes
+  ADD COLUMN IF NOT EXISTS photo TEXT;
 
 ALTER TABLE public.app_settings
   ADD COLUMN IF NOT EXISTS login_notes JSONB DEFAULT '[]'::jsonb;
