@@ -69,6 +69,7 @@ export default function App() {
   const autoPushTimeout = React.useRef<number | null>(null);
   const pushInFlightTime = React.useRef<number>(0);
   const lastRemotePullTime = React.useRef<number>(0);
+  const localChangePending = React.useRef(false);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -166,7 +167,7 @@ export default function App() {
       try {
         // Skip pulling if we just pushed within the last 2.5 seconds.
         const now = Date.now();
-        if (now - pushInFlightTime.current < 2500) {
+        if (localChangePending.current || now - pushInFlightTime.current < 2500) {
           return;
         }
 
@@ -244,6 +245,7 @@ export default function App() {
       console.log("⏰ Auto-push timer fired, pushing state...");
       supabasePushAll(state)
         .then(() => {
+          localChangePending.current = false;
           console.log("✅ Auto-push succeeded");
         })
         .catch((e: any) => {
@@ -289,6 +291,7 @@ export default function App() {
   };
 
   const handleAddBill = (newBill: Bill) => {
+    localChangePending.current = true;
     setState((prev) => {
       let updatedAccounts = prev.accounts;
 
@@ -320,6 +323,7 @@ export default function App() {
   };
 
   const handleUpdateBill = (updated: Bill) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       bills: prev.bills.map((b) => (b.id === updated.id ? updated : b)),
@@ -413,6 +417,7 @@ export default function App() {
   };
 
   const handleAddCategory = (newCat: Category) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       categories: [...prev.categories, newCat],
@@ -420,6 +425,7 @@ export default function App() {
   };
 
   const handleUpdateCategory = (updated: Category) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       categories: prev.categories.map((c) => (c.id === updated.id ? updated : c)),

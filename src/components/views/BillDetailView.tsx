@@ -57,6 +57,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editName, setEditName] = useState(bill?.name || "");
   const [editCategory, setEditCategory] = useState(bill?.category || "");
+  const [editAmount, setEditAmount] = useState(bill?.amount?.toString() || "0");
   const [editDueIso, setEditDueIso] = useState(dueToISO(bill?.due || "", bill?.year || CURRENT_YEAR));
   const [editIban, setEditIban] = useState(bill?.iban || "");
   const [editRef, setEditRef] = useState(bill?.reference || "");
@@ -64,6 +65,8 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentBy, setPaymentBy] = useState("");
   const [isPlan, setIsPlan] = useState(bill?.paymentPlan || false);
+  const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
+  const [editPaymentAmount, setEditPaymentAmount] = useState("");
   const [notesText, setNotesText] = useState("");
   const [copiedIban, setCopiedIban] = useState(false);
 
@@ -109,6 +112,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
       ...bill,
       name: editName.trim() || bill.name,
       category: editCategory || bill.category,
+      amount: Number(editAmount) > 0 ? Number(editAmount) : bill.amount,
       due,
       month,
       year,
@@ -140,6 +144,26 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
     onUpdateBill({ ...bill, notes: updatedNotes });
     setNotesText("");
     onShowToast("Note saved");
+  };
+
+  const handleSavePaymentAmount = (paymentId: number) => {
+    const amount = Number(editPaymentAmount);
+    if (!amount || amount <= 0) {
+      onShowToast("Please enter a valid payment amount");
+      return;
+    }
+    const payments = (bill.payments || []).map((payment) =>
+      payment.id === paymentId ? { ...payment, amount } : payment
+    );
+    const paidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    onUpdateBill({
+      ...bill,
+      payments,
+      paidAmount,
+    });
+    setEditingPaymentId(null);
+    setEditPaymentAmount("");
+    onShowToast("Payment amount updated");
   };
 
   const handleEscalationChange = (val: "reminder" | "aanmaning" | "deurwaarder" | null) => {
@@ -278,6 +302,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
           onClick={() => {
             setEditName(bill.name);
             setEditCategory(bill.category);
+            setEditAmount(bill.amount.toString());
             setEditDueIso(dueToISO(bill.due, bill.year));
             setEditIban(bill.iban || "");
             setEditRef(bill.reference || "");
@@ -313,6 +338,17 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Total bill amount</div>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-black/10 text-sm font-mono focus:outline-none focus:border-[#7C3AED]"
+            />
           </div>
           <div>
             <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Due date</div>
@@ -579,9 +615,29 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono font-bold text-sm text-[#2B2740]">
-                    {formatCurrency(p.amount, state.currency.symbol)}
-                  </span>
+                  {editingPaymentId === p.id ? (
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={editPaymentAmount}
+                      onChange={(event) => setEditPaymentAmount(event.target.value)}
+                      onBlur={() => handleSavePaymentAmount(p.id)}
+                      autoFocus
+                      className="w-24 p-1.5 rounded-lg border border-[#7C3AED]/40 text-sm font-mono"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingPaymentId(p.id);
+                        setEditPaymentAmount(String(p.amount));
+                      }}
+                      className="font-mono font-bold text-sm text-[#2B2740] hover:text-[#7C3AED]"
+                      title="Edit payment amount"
+                    >
+                      {formatCurrency(p.amount, state.currency.symbol)}
+                    </button>
+                  )}
                   <button
                     onClick={() => onDeletePayment(bill.id, p.id)}
                     className="text-[#2B2740]/40 hover:text-[#E5484D] text-lg font-bold px-1"
