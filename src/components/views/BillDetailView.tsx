@@ -58,6 +58,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
   const [editName, setEditName] = useState(bill?.name || "");
   const [editCategory, setEditCategory] = useState(bill?.category || "");
   const [editAmount, setEditAmount] = useState(bill?.amount?.toString() || "0");
+  const [editPaidAmount, setEditPaidAmount] = useState(bill?.paidAmount?.toString() || "0");
   const [editDueIso, setEditDueIso] = useState(dueToISO(bill?.due || "", bill?.year || CURRENT_YEAR));
   const [editIban, setEditIban] = useState(bill?.iban || "");
   const [editRef, setEditRef] = useState(bill?.reference || "");
@@ -108,11 +109,36 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
 
   const handleSaveDetails = () => {
     const { due, month, year } = isoToDue(editDueIso);
+    const totalAmount = Number(editAmount);
+    const paidAmount = Number(editPaidAmount);
+    if (
+      !totalAmount ||
+      totalAmount <= 0 ||
+      Number.isNaN(paidAmount) ||
+      paidAmount < 0 ||
+      paidAmount > totalAmount
+    ) {
+      onShowToast("Please enter valid total and paid amounts");
+      return;
+    }
     const updated: Bill = {
       ...bill,
       name: editName.trim() || bill.name,
       category: editCategory || bill.category,
-      amount: Number(editAmount) > 0 ? Number(editAmount) : bill.amount,
+      amount: totalAmount,
+      paidAmount,
+      paidBy: paidAmount > 0 ? bill.paidBy : null,
+      payments: paidAmount === bill.paidAmount
+        ? bill.payments
+        : paidAmount === 0
+        ? []
+        : [{
+            id: bill.payments?.[0]?.id || Date.now(),
+            amount: paidAmount,
+            paidBy: bill.paidBy,
+            month: bill.month,
+            year: bill.year,
+          }],
       due,
       month,
       year,
@@ -303,6 +329,7 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
             setEditName(bill.name);
             setEditCategory(bill.category);
             setEditAmount(bill.amount.toString());
+            setEditPaidAmount(bill.paidAmount.toString());
             setEditDueIso(dueToISO(bill.due, bill.year));
             setEditIban(bill.iban || "");
             setEditRef(bill.reference || "");
@@ -339,16 +366,29 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({
               ))}
             </select>
           </div>
-          <div>
-            <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Total bill amount</div>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={editAmount}
-              onChange={(e) => setEditAmount(e.target.value)}
-              className="w-full p-2.5 rounded-xl border border-black/10 text-sm font-mono focus:outline-none focus:border-[#7C3AED]"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Total bill amount</div>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-black/10 text-sm font-mono focus:outline-none focus:border-[#7C3AED]"
+              />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Paid amount</div>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editPaidAmount}
+                onChange={(e) => setEditPaidAmount(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-black/10 text-sm font-mono focus:outline-none focus:border-[#7C3AED]"
+              />
+            </div>
           </div>
           <div>
             <div className="text-xs font-bold text-[#2B2740]/60 mb-1">Due date</div>
