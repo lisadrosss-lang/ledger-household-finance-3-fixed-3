@@ -418,6 +418,13 @@ export const AccountView: React.FC<AccountViewProps> = ({
               </div>
             </div>
           </div>
+          <button
+            onClick={() => setShowAddCashBookModal(true)}
+            className="px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+          >
+            <Plus size={14} />
+            <span>Add money</span>
+          </button>
         </div>
       )}
 
@@ -990,7 +997,11 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <tbody className="divide-y divide-black/[0.04]">
                 {(account.transactions || []).length > 0 ? (
                   (account.transactions || []).map((t) => (
-                    <tr key={t.id} className="hover:bg-black/[0.01]">
+                    <tr
+                      key={t.id}
+                      onClick={() => onNavigate(`txndetail:${account.id}:${t.id}`)}
+                      className="hover:bg-black/[0.01] cursor-pointer"
+                    >
                       <td className="p-3 text-[#2B2740]/60 font-medium">
                         {t.month} '{String(t.year).slice(2)}
                       </td>
@@ -1003,7 +1014,10 @@ export const AccountView: React.FC<AccountViewProps> = ({
                       </td>
                       <td className="p-3 text-center">
                         <button
-                          onClick={() => handleDeleteTxn(t.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteTxn(t.id);
+                          }}
                           className="text-[#2B2740]/30 hover:text-[#E5484D] transition-colors p-1"
                         >
                           <Trash2 size={13} />

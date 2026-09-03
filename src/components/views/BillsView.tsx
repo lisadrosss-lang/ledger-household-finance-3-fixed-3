@@ -18,6 +18,7 @@ interface BillsViewProps {
   categoryFilter?: string | null;
   onClearCategoryFilter: () => void;
   onOpenReminders?: () => void;
+  onReorderBills?: (bills: Bill[]) => void;
 }
 
 export const BillsView: React.FC<BillsViewProps> = ({
@@ -26,6 +27,7 @@ export const BillsView: React.FC<BillsViewProps> = ({
   categoryFilter,
   onClearCategoryFilter,
   onOpenReminders,
+  onReorderBills,
 }) => {
   const [activeFilter, setActiveFilter] = useState<"all" | "urgent" | "upcoming" | "partial" | "paid">("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -33,6 +35,8 @@ export const BillsView: React.FC<BillsViewProps> = ({
   const [extraMonths, setExtraMonths] = useState<{ month: string; year: number; key: string }[]>([]);
   const [newMonth, setNewMonth] = useState("Aug");
   const [newYear, setNewYear] = useState(CURRENT_YEAR);
+  const [draggedBillId, setDraggedBillId] = useState<number | null>(null);
+  const [dropBillId, setDropBillId] = useState<number | null>(null);
 
   // Generate periods from bills + extra
   const periodMap: Record<string, { month: string; year: number; key: string }> = {};
@@ -88,6 +92,19 @@ export const BillsView: React.FC<BillsViewProps> = ({
     }
     setPeriodFilter(key);
     setAddingMonth(false);
+  };
+
+  const handleBillDrop = (targetId: number) => {
+    if (draggedBillId === null || draggedBillId === targetId || !onReorderBills) return;
+    const reordered = [...state.bills];
+    const fromIndex = reordered.findIndex((b) => b.id === draggedBillId);
+    const targetIndex = reordered.findIndex((b) => b.id === targetId);
+    if (fromIndex === -1 || targetIndex === -1) return;
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    onReorderBills(reordered.map((bill, index) => ({ ...bill, sortOrder: index })));
+    setDraggedBillId(null);
+    setDropBillId(null);
   };
 
   return (
@@ -246,14 +263,25 @@ export const BillsView: React.FC<BillsViewProps> = ({
             filteredBills.map((b) => {
               const cat = state.categories.find((c) => c.id === b.category);
               return (
-                <BillCard
-                  key={b.id}
-                  bill={b}
-                  category={cat}
-                  currencySymbol={state.currency.symbol}
-                  draggable
-                  onClick={() => onNavigate(`detail:${b.id}`)}
-                />
+                <React.Fragment key={b.id}>
+                  {dropBillId === b.id && draggedBillId !== b.id && (
+                    <div className="h-1 rounded-full bg-[#7C3AED] shadow-sm" aria-label="Drop bill here" />
+                  )}
+                  <BillCard
+                    bill={b}
+                    category={cat}
+                    currencySymbol={state.currency.symbol}
+                    draggable={!!onReorderBills}
+                    onDragStart={() => setDraggedBillId(b.id)}
+                    onDragOver={() => setDropBillId(b.id)}
+                    onDrop={() => handleBillDrop(b.id)}
+                    onDragEnd={() => {
+                      setDraggedBillId(null);
+                      setDropBillId(null);
+                    }}
+                    onClick={() => onNavigate(`detail:${b.id}`)}
+                  />
+                </React.Fragment>
               );
             })
           ) : (

@@ -437,6 +437,10 @@ export default function App() {
     }));
   };
 
+  const handleReorderBills = (newBills: Bill[]) => {
+    setState((prev) => ({ ...prev, bills: newBills }));
+  };
+
   const handleUpdateAccount = (updated: Account) => {
     setState((prev) => ({
       ...prev,
@@ -561,6 +565,7 @@ export default function App() {
               categoryFilter={categoryFilter}
               onClearCategoryFilter={() => setCategoryFilter(null)}
               onOpenReminders={() => setShowReminderModal(true)}
+              onReorderBills={handleReorderBills}
             />
           ) : baseView === "detail" ? (
             <BillDetailView

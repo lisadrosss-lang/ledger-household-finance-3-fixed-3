@@ -9,6 +9,9 @@ interface BillCardProps {
   onClick: () => void;
   draggable?: boolean;
   onDragStart?: () => void;
+  onDragOver?: () => void;
+  onDrop?: () => void;
+  onDragEnd?: () => void;
 }
 
 export const BillCard: React.FC<BillCardProps> = ({
@@ -17,6 +20,10 @@ export const BillCard: React.FC<BillCardProps> = ({
   currencySymbol,
   onClick,
   draggable = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }) => {
   const status = getPaymentStatus(bill);
   const urgent = isBillUrgent(bill);
@@ -57,7 +64,20 @@ export const BillCard: React.FC<BillCardProps> = ({
   const isEscalated = bill.escalation === "deurwaarder";
 
   return (
-    <div className="flex items-center gap-1.5 w-full group">
+    <div
+      className={`flex items-center gap-1.5 w-full group ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver?.();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop?.();
+      }}
+      onDragEnd={onDragEnd}
+    >
       {draggable && (
         <span className="text-[#2B2740]/40 text-base cursor-grab active:cursor-grabbing px-1 select-none">
           ⠿
