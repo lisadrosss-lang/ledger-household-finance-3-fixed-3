@@ -341,6 +341,7 @@ export default function App() {
       message: "Are you sure you want to remove this bill? This cannot be undone.",
       confirmLabel: "Remove Bill",
       onConfirm: () => {
+        localChangePending.current = true;
         setState((prev) => ({
           ...prev,
           bills: prev.bills.filter((b) => b.id !== id),
@@ -353,6 +354,7 @@ export default function App() {
   };
 
   const handleAddPayment = (billId: number, amount: number, paidBy: string, isPlan: boolean) => {
+    localChangePending.current = true;
     setState((prev) => {
       const bill = prev.bills.find((b) => b.id === billId);
       if (!bill) return prev;
@@ -404,6 +406,7 @@ export default function App() {
   };
 
   const handleDeletePayment = (billId: number, paymentId: number) => {
+    localChangePending.current = true;
     setState((prev) => {
       const bill = prev.bills.find((b) => b.id === billId);
       if (!bill) return prev;
@@ -438,6 +441,7 @@ export default function App() {
   };
 
   const handleDeleteCategory = (id: string) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       categories: prev.categories.filter((c) => c.id !== id),
@@ -446,6 +450,7 @@ export default function App() {
   };
 
   const handleReorderCategories = (newCategories: Category[]) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       categories: newCategories,
@@ -453,10 +458,12 @@ export default function App() {
   };
 
   const handleReorderBills = (newBills: Bill[]) => {
+    localChangePending.current = true;
     setState((prev) => ({ ...prev, bills: newBills }));
   };
 
   const handleUpdateAccount = (updated: Account) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       accounts: prev.accounts.map((a) => (a.id === updated.id ? updated : a)),
@@ -464,6 +471,7 @@ export default function App() {
   };
 
   const handleUpdateGroceries = (updated: GroceriesState) => {
+    localChangePending.current = true;
     setState((prev) => ({
       ...prev,
       groceries: updated,
