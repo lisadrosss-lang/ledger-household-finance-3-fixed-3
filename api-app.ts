@@ -603,13 +603,7 @@ export async function createApiApp(): Promise<express.Express> {
         const { data: setData, error: setErr } = await supabase.from("app_settings").select("*").limit(1);
         if (!setErr && setData && setData[0]) {
           if (setData[0].verse) {
-            const remoteVerse = setData[0].verse;
-            updates.verse = remoteVerse?.reference === "Proverbs 3:5"
-              ? {
-                  text: "Trust in the Lord with all your heart and don't lean on your own understanding",
-                  reference: "Proverbs 3:5",
-                }
-              : remoteVerse;
+            updates.verse = setData[0].verse;
           }
           if (setData[0].subscriptions) updates.subscriptions = setData[0].subscriptions;
           if (setData[0].currency) updates.currency = setData[0].currency;
