@@ -113,7 +113,12 @@ export default function App() {
     let isMounted = true;
     supabasePullAll()
       .then((remote) => {
-        if (!isMounted || !remote || Object.keys(remote).length === 0) return;
+        if (
+          !isMounted ||
+          localChangePending.current ||
+          !remote ||
+          Object.keys(remote).length === 0
+        ) return;
         
         setState((prev) => {
           // Smart merge: if remote data is dramatically smaller than local,
